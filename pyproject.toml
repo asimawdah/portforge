@@ -22,6 +22,11 @@ classifiers = [
   "Topic :: System :: Systems Administration",
 ]
 
+[project.urls]
+Homepage = "https://github.com/asimawdah/portpilot"
+Repository = "https://github.com/asimawdah/portpilot"
+Issues = "https://github.com/asimawdah/portpilot/issues"
+
 [project.scripts]
 portpilot = "portpilot.cli:main"
 
