@@ -1,19 +1,19 @@
-# PortLane
+# PortForge
 
 Find and free busy development ports in seconds.
 
-PortLane helps developers quickly answer the question: **what is using port 3000?** It shows the process, PID, command, and gives you a safe command when you want to free the port.
+PortForge helps developers quickly answer the question: **what is using port 3000?** It shows the process, PID, command, and gives you a safe command when you want to free the port.
 
 ## Install
 
 ```bash
-pip install portlane
+pip install portforge
 ```
 
 The installed command is:
 
 ```bash
-portlane
+portforge
 ```
 
 ## Usage
@@ -21,37 +21,37 @@ portlane
 Check one port:
 
 ```bash
-portlane 3000
+portforge 3000
 ```
 
 Scan common development ports:
 
 ```bash
-portlane scan
+portforge scan
 ```
 
 Scan custom ports:
 
 ```bash
-portlane scan -p 3000,5173,8000
+portforge scan -p 3000,5173,8000
 ```
 
 Output JSON:
 
 ```bash
-portlane 3000 --json
+portforge 3000 --json
 ```
 
 Write output to a file:
 
 ```bash
-portlane 3000 -o ports.json --json
+portforge 3000 -o ports.json --json
 ```
 
 Free a busy port after confirmation:
 
 ```bash
-portlane kill 3000 --yes
+portforge kill 3000 --yes
 ```
 
 ## Safety notes
@@ -63,7 +63,7 @@ portlane kill 3000 --yes
 
 ## Platform support
 
-PortLane is designed for local development workflows on Unix-like systems where process and port inspection tools are available. Windows support is planned, but it may require different process lookup behavior.
+PortForge is designed for local development workflows on Unix-like systems where process and port inspection tools are available. Windows support is planned, but it may require different process lookup behavior.
 
 ## CLI shortcuts
 
@@ -76,19 +76,19 @@ PortLane is designed for local development workflows on Unix-like systems where 
 ## Example
 
 ```text
-$ portlane 3000
+$ portforge 3000
 Port 3000 is busy
 
 PID      USER         NAME             COMMAND
 18422    asim         node             npm run dev
 
 Actions:
-  portlane kill 3000
+  portforge kill 3000
 ```
 
 ```text
-$ portlane scan
-PortLane scan
+$ portforge scan
+PortForge scan
 
 PORT     STATUS   PROCESS
 3000     busy     node
