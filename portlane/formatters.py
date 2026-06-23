@@ -15,13 +15,13 @@ def format_port_report(check: PortCheck) -> str:
         _process_table(check.processes),
         "",
         "Actions:",
-        f"  portlane kill {check.port}",
+        f"  portforge kill {check.port}",
     ]
     return "\n".join(lines).rstrip() + "\n"
 
 
 def format_scan_report(checks: list[PortCheck]) -> str:
-    lines = ["PortLane scan", "", f"{'PORT':<8} {'STATUS':<8} PROCESS"]
+    lines = ["PortForge scan", "", f"{'PORT':<8} {'STATUS':<8} PROCESS"]
     for check in checks:
         if check.busy:
             names = ", ".join(sorted({process.name for process in check.processes}))
