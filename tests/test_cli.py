@@ -42,11 +42,28 @@ class CliTest(unittest.TestCase):
             main(["65536"])
 
     def test_cli_rejects_invalid_scan_port_ranges(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(SystemExit):
             main(["scan", "--ports", "3000,65536"])
 
+    def test_cli_rejects_blank_scan_port_entries(self):
+        with self.assertRaises(SystemExit):
+            main(["scan", "--ports", "3000,,8000"])
+
+    def test_cli_scan_deduplicates_custom_ports(self):
+        calls = []
+
+        def fake_check(port):
+            calls.append(port)
+            return PortCheck(port=port, processes=[])
+
+        with patch("portforge.cli.check_port", side_effect=fake_check):
+            exit_code = main(["scan", "--ports", "3000,3000,8000"])
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(calls, [3000, 8000])
+
     def test_cli_kill_rejects_invalid_port_ranges(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(SystemExit):
             main(["kill", "0", "--yes"])
 
     def test_cli_kill_requires_yes_for_non_interactive_kill(self):
