@@ -56,9 +56,9 @@ portforge kill 3000 --yes
 
 ## Safety notes
 
-- Review the displayed process name, PID, user, and command before killing anything.
-- Prefer the normal kill command first; use `--force` only when a process does not stop cleanly.
-- Avoid running kill commands against system services or processes you do not recognize.
+- Review the displayed process name, PID, user, and command before stopping anything.
+- Prefer the normal stop action first; use `--force` only when a process does not stop cleanly.
+- Avoid stopping system services or processes you do not recognize.
 - When using `--json` or `--output`, review files before sharing them because command paths can include local usernames or project names.
 
 ## Platform support
@@ -70,7 +70,7 @@ PortForge is designed for local development workflows on Unix-like systems where
 - `-p`, `--ports`: comma-separated ports for scan
 - `-j`, `--json`: output JSON
 - `-o`, `--output`: write output to file
-- `-y`, `--yes`: confirm port-freeing action
+- `-y`, `--yes`: confirm process-stop actions
 - `-f`, `--force`: use a stronger termination signal
 
 ## Example
@@ -99,9 +99,24 @@ PORT     STATUS   PROCESS
 
 ## Development
 
+Create a local environment and run the test suite before publishing changes:
+
 ```bash
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -e .
 python3 -m unittest discover -s tests -v
 ```
+
+Recommended manual checks:
+
+```bash
+portforge scan
+portforge 3000 --json
+portforge scan -p 3000,5173,8000
+```
+
+For AI-assisted updates, keep changes isolated in the `ai_updates` branch until they are reviewed and explicitly merged.
 
 ## Roadmap
 
