@@ -3,8 +3,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from portlane.cli import main
-from portlane.models import PortCheck, ProcessInfo
+from portforge.cli import main
+from portforge.models import PortCheck, ProcessInfo
 
 
 class CliTest(unittest.TestCase):
@@ -13,7 +13,7 @@ class CliTest(unittest.TestCase):
             output = Path(tmp) / "ports.json"
             check = PortCheck(port=3000, processes=[])
 
-            with patch("portlane.cli.check_port", return_value=check):
+            with patch("portforge.cli.check_port", return_value=check):
                 exit_code = main(["3000", "--json", "--output", str(output)])
 
             self.assertEqual(exit_code, 0)
@@ -26,7 +26,7 @@ class CliTest(unittest.TestCase):
             calls.append(port)
             return PortCheck(port=port, processes=[])
 
-        with patch("portlane.cli.check_port", side_effect=fake_check):
+        with patch("portforge.cli.check_port", side_effect=fake_check):
             exit_code = main(["scan"])
 
         self.assertEqual(exit_code, 0)
@@ -53,13 +53,13 @@ class CliTest(unittest.TestCase):
         process = ProcessInfo(pid=123, name="node", user="asim", command="node server.js", address="*:3000")
         check = PortCheck(port=3000, processes=[process])
 
-        with patch("portlane.cli.check_port", return_value=check), patch("portlane.cli.kill_processes") as kill:
+        with patch("portforge.cli.check_port", return_value=check), patch("portforge.cli.kill_processes") as kill:
             exit_code = main(["kill", "3000"])
 
         self.assertEqual(exit_code, 2)
         kill.assert_not_called()
 
-        with patch("portlane.cli.check_port", return_value=check), patch("portlane.cli.kill_processes", return_value=[123]) as kill:
+        with patch("portforge.cli.check_port", return_value=check), patch("portforge.cli.kill_processes", return_value=[123]) as kill:
             exit_code = main(["kill", "3000", "--yes"])
 
         self.assertEqual(exit_code, 0)

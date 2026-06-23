@@ -23,13 +23,13 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/asimawdah/portpilot"
-Repository = "https://github.com/asimawdah/portpilot"
-Issues = "https://github.com/asimawdah/portpilot/issues"
+Homepage = "https://github.com/asimawdah/portforge"
+Repository = "https://github.com/asimawdah/portforge"
+Issues = "https://github.com/asimawdah/portforge/issues"
 
 [project.scripts]
-portforge = "portlane.cli:main"
+portforge = "portforge.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["portlane*"]
+include = ["portforge*"]

@@ -1,8 +1,8 @@
 import json
 import unittest
 
-from portlane.formatters import format_port_report, format_scan_report, to_json
-from portlane.models import PortCheck, ProcessInfo
+from portforge.formatters import format_port_report, format_scan_report, to_json
+from portforge.models import PortCheck, ProcessInfo
 
 
 class FormattersTest(unittest.TestCase):

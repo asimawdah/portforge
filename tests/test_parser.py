@@ -1,6 +1,6 @@
 import unittest
 
-from portlane.parser import parse_lsof_output
+from portforge.parser import parse_lsof_output
 
 
 class ParseLsofOutputTest(unittest.TestCase):
