@@ -29,7 +29,10 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
 
     if args.command == "scan":
-        ports = _parse_ports(args.ports) if args.ports else DEFAULT_SCAN_PORTS
+        try:
+            ports = _parse_ports(args.ports) if args.ports else DEFAULT_SCAN_PORTS
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
         checks = [check_port(port) for port in ports]
         output = to_json(checks) if args.json else format_scan_report(checks)
         _emit(output, args.output)
@@ -38,7 +41,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "kill":
         if args.port is None:
             raise SystemExit("portforge kill requires a port number")
-        port = _validate_port(args.port)
+        try:
+            port = _validate_port(args.port)
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
         check = check_port(port)
         if not check.busy:
             _emit(format_port_report(check), args.output)
@@ -65,16 +71,27 @@ def main(argv: list[str] | None = None) -> int:
 
 def _parse_ports(value: str) -> list[int]:
     ports: list[int] = []
+    seen: set[int] = set()
     for item in value.split(","):
         item = item.strip()
         if not item:
+            raise ValueError("Scan ports must be a comma-separated list of port numbers")
+        port = _parse_port(item)
+        if port in seen:
             continue
-        ports.append(_parse_port(item))
+        ports.append(port)
+        seen.add(port)
+    if not ports:
+        raise ValueError("At least one port is required")
     return ports
 
 
 def _parse_port(value: str) -> int:
-    return _validate_port(int(value))
+    try:
+        port = int(value)
+    except ValueError as exc:
+        raise ValueError(f"Invalid port number: {value}") from exc
+    return _validate_port(port)
 
 
 def _validate_port(port: int) -> int:
