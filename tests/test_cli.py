@@ -34,6 +34,21 @@ class CliTest(unittest.TestCase):
         self.assertIn(5173, calls)
         self.assertIn(8000, calls)
 
+    def test_cli_rejects_invalid_single_port_ranges(self):
+        with self.assertRaises(SystemExit):
+            main(["0"])
+
+        with self.assertRaises(SystemExit):
+            main(["65536"])
+
+    def test_cli_rejects_invalid_scan_port_ranges(self):
+        with self.assertRaises(ValueError):
+            main(["scan", "--ports", "3000,65536"])
+
+    def test_cli_kill_rejects_invalid_port_ranges(self):
+        with self.assertRaises(ValueError):
+            main(["kill", "0", "--yes"])
+
     def test_cli_kill_requires_yes_for_non_interactive_kill(self):
         process = ProcessInfo(pid=123, name="node", user="asim", command="node server.js", address="*:3000")
         check = PortCheck(port=3000, processes=[process])
