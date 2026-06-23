@@ -54,6 +54,17 @@ Free a busy port after confirmation:
 portlane kill 3000 --yes
 ```
 
+## Safety notes
+
+- Review the displayed process name, PID, user, and command before killing anything.
+- Prefer the normal kill command first; use `--force` only when a process does not stop cleanly.
+- Avoid running kill commands against system services or processes you do not recognize.
+- When using `--json` or `--output`, review files before sharing them because command paths can include local usernames or project names.
+
+## Platform support
+
+PortLane is designed for local development workflows on Unix-like systems where process and port inspection tools are available. Windows support is planned, but it may require different process lookup behavior.
+
 ## CLI shortcuts
 
 - `-p`, `--ports`: comma-separated ports for scan
