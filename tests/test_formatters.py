@@ -13,7 +13,7 @@ class FormattersTest(unittest.TestCase):
 
         self.assertIn("Port 3000 is busy", text)
         self.assertIn("node", text)
-        self.assertIn("portlane kill 3000", text)
+        self.assertIn("portforge kill 3000", text)
 
     def test_format_port_report_for_free_port(self):
         text = format_port_report(PortCheck(port=5173, processes=[]))
@@ -28,6 +28,7 @@ class FormattersTest(unittest.TestCase):
 
         text = format_scan_report(checks)
 
+        self.assertIn("PortForge scan", text)
         self.assertIn("3000", text)
         self.assertIn("busy", text)
         self.assertIn("5173", text)
