@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "portpilot"
+name = "portforge"
 version = "0.1.0"
 description = "Find and free busy development ports in seconds."
 readme = "README.md"
@@ -28,8 +28,8 @@ Repository = "https://github.com/asimawdah/portpilot"
 Issues = "https://github.com/asimawdah/portpilot/issues"
 
 [project.scripts]
-portpilot = "portpilot.cli:main"
+portforge = "portlane.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["portpilot*"]
+include = ["portlane*"]

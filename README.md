@@ -1,19 +1,19 @@
-# PortPilot
+# PortForge
 
 Find and free busy development ports in seconds.
 
-PortPilot helps developers quickly answer the question: **what is using port 3000?** It shows the process, PID, command, and gives you a safe kill command when you want to free the port.
+PortForge helps developers quickly answer the question: **what is using port 3000?** It shows the process, PID, command, and gives you a safe command when you want to free the port.
 
 ## Install
 
 ```bash
-pip install portpilot
+pip install portforge
 ```
 
 The installed command is:
 
 ```bash
-portpilot
+portforge
 ```
 
 ## Usage
@@ -21,69 +21,74 @@ portpilot
 Check one port:
 
 ```bash
-portpilot 3000
+portforge 3000
 ```
 
 Scan common development ports:
 
 ```bash
-portpilot scan
+portforge scan
 ```
 
 Scan custom ports:
 
 ```bash
-portpilot scan -p 3000,5173,8000
+portforge scan -p 3000,5173,8000
 ```
 
 Output JSON:
 
 ```bash
-portpilot 3000 --json
+portforge 3000 --json
 ```
 
 Write output to a file:
 
 ```bash
-portpilot 3000 -o ports.json --json
+portforge 3000 -o ports.json --json
 ```
 
-Free a busy port safely:
+Free a busy port after confirmation:
 
 ```bash
-portpilot kill 3000 --yes
+portforge kill 3000 --yes
 ```
 
-Force kill with SIGKILL:
+## Safety notes
 
-```bash
-portpilot kill 3000 --yes --force
-```
+- Review the displayed process name, PID, user, and command before killing anything.
+- Prefer the normal kill command first; use `--force` only when a process does not stop cleanly.
+- Avoid running kill commands against system services or processes you do not recognize.
+- When using `--json` or `--output`, review files before sharing them because command paths can include local usernames or project names.
+
+## Platform support
+
+PortForge is designed for local development workflows on Unix-like systems where process and port inspection tools are available. Windows support is planned, but it may require different process lookup behavior.
 
 ## CLI shortcuts
 
 - `-p`, `--ports`: comma-separated ports for scan
 - `-j`, `--json`: output JSON
 - `-o`, `--output`: write output to file
-- `-y`, `--yes`: confirm kill action
-- `-f`, `--force`: use SIGKILL instead of SIGTERM
+- `-y`, `--yes`: confirm port-freeing action
+- `-f`, `--force`: use a stronger termination signal
 
 ## Example
 
 ```text
-$ portpilot 3000
+$ portforge 3000
 Port 3000 is busy
 
 PID      USER         NAME             COMMAND
 18422    asim         node             npm run dev
 
 Actions:
-  portpilot kill 3000
+  portforge kill 3000
 ```
 
 ```text
-$ portpilot scan
-PortPilot scan
+$ portforge scan
+PortForge scan
 
 PORT     STATUS   PROCESS
 3000     busy     node
@@ -103,8 +108,8 @@ python3 -m unittest discover -s tests -v
 - [x] Check a single port
 - [x] Scan common development ports
 - [x] JSON output
-- [x] Safe kill with explicit confirmation
-- [ ] Interactive kill confirmation
+- [x] Safe port freeing with explicit confirmation
+- [ ] Interactive confirmation
 - [ ] Project directory detection from process cwd
 - [ ] Windows support improvements
 - [ ] Rich colored output

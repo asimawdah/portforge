@@ -12,7 +12,7 @@ MAX_PORT = 65535
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="portpilot",
+        prog="portforge",
         description="Find and free busy development ports in seconds.",
     )
     parser.add_argument("command", nargs="?", default="scan", help="Port number, 'scan', or 'kill'")
@@ -37,7 +37,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "kill":
         if args.port is None:
-            raise SystemExit("portpilot kill requires a port number")
+            raise SystemExit("portforge kill requires a port number")
         port = _validate_port(args.port)
         check = check_port(port)
         if not check.busy:

@@ -3,8 +3,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from portpilot.cli import main
-from portpilot.models import PortCheck, ProcessInfo
+from portlane.cli import main
+from portlane.models import PortCheck, ProcessInfo
 
 
 class CliTest(unittest.TestCase):
@@ -13,7 +13,7 @@ class CliTest(unittest.TestCase):
             output = Path(tmp) / "ports.json"
             check = PortCheck(port=3000, processes=[])
 
-            with patch("portpilot.cli.check_port", return_value=check):
+            with patch("portlane.cli.check_port", return_value=check):
                 exit_code = main(["3000", "--json", "--output", str(output)])
 
             self.assertEqual(exit_code, 0)
@@ -26,7 +26,7 @@ class CliTest(unittest.TestCase):
             calls.append(port)
             return PortCheck(port=port, processes=[])
 
-        with patch("portpilot.cli.check_port", side_effect=fake_check):
+        with patch("portlane.cli.check_port", side_effect=fake_check):
             exit_code = main(["scan"])
 
         self.assertEqual(exit_code, 0)
@@ -34,17 +34,32 @@ class CliTest(unittest.TestCase):
         self.assertIn(5173, calls)
         self.assertIn(8000, calls)
 
+    def test_cli_rejects_invalid_single_port_ranges(self):
+        with self.assertRaises(SystemExit):
+            main(["0"])
+
+        with self.assertRaises(SystemExit):
+            main(["65536"])
+
+    def test_cli_rejects_invalid_scan_port_ranges(self):
+        with self.assertRaises(ValueError):
+            main(["scan", "--ports", "3000,65536"])
+
+    def test_cli_kill_rejects_invalid_port_ranges(self):
+        with self.assertRaises(ValueError):
+            main(["kill", "0", "--yes"])
+
     def test_cli_kill_requires_yes_for_non_interactive_kill(self):
         process = ProcessInfo(pid=123, name="node", user="asim", command="node server.js", address="*:3000")
         check = PortCheck(port=3000, processes=[process])
 
-        with patch("portpilot.cli.check_port", return_value=check), patch("portpilot.cli.kill_processes") as kill:
+        with patch("portlane.cli.check_port", return_value=check), patch("portlane.cli.kill_processes") as kill:
             exit_code = main(["kill", "3000"])
 
         self.assertEqual(exit_code, 2)
         kill.assert_not_called()
 
-        with patch("portpilot.cli.check_port", return_value=check), patch("portpilot.cli.kill_processes", return_value=[123]) as kill:
+        with patch("portlane.cli.check_port", return_value=check), patch("portlane.cli.kill_processes", return_value=[123]) as kill:
             exit_code = main(["kill", "3000", "--yes"])
 
         self.assertEqual(exit_code, 0)
