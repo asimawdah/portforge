@@ -7,7 +7,7 @@ PortPilot helps developers quickly answer the question: **what is using port 300
 ## Install
 
 ```bash
-pip install portploit
+pip install portpilot
 ```
 
 The installed command is:
@@ -15,8 +15,6 @@ The installed command is:
 ```bash
 portpilot
 ```
-
-> Note: the PyPI package name is `portploit`; the CLI command remains `portpilot`.
 
 ## Usage
 
