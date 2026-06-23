@@ -1,8 +1,8 @@
 import json
 import unittest
 
-from portpilot.formatters import format_port_report, format_scan_report, to_json
-from portpilot.models import PortCheck, ProcessInfo
+from portlane.formatters import format_port_report, format_scan_report, to_json
+from portlane.models import PortCheck, ProcessInfo
 
 
 class FormattersTest(unittest.TestCase):
@@ -13,7 +13,7 @@ class FormattersTest(unittest.TestCase):
 
         self.assertIn("Port 3000 is busy", text)
         self.assertIn("node", text)
-        self.assertIn("portpilot kill 3000", text)
+        self.assertIn("portlane kill 3000", text)
 
     def test_format_port_report_for_free_port(self):
         text = format_port_report(PortCheck(port=5173, processes=[]))
