@@ -34,6 +34,24 @@ class FormattersTest(unittest.TestCase):
         self.assertIn("5173", text)
         self.assertIn("free", text)
 
+    def test_format_scan_report_sorts_multiple_process_names(self):
+        checks = [
+            PortCheck(
+                port=8000,
+                processes=[
+                    ProcessInfo(pid=201, name="python", user="asim", command="python app.py", address="*:8000"),
+                    ProcessInfo(pid=202, name="node", user="asim", command="npm run dev", address="*:8000"),
+                    ProcessInfo(pid=203, name="python", user="asim", command="python worker.py", address="*:8000"),
+                ],
+            )
+        ]
+
+        text = format_scan_report(checks)
+
+        self.assertIn("8000", text)
+        self.assertIn("node, python", text)
+        self.assertNotIn("python, node", text)
+
     def test_to_json_outputs_machine_readable_report(self):
         data = json.loads(to_json([PortCheck(port=3000, processes=[])]))
 
