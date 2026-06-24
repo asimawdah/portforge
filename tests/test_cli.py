@@ -35,11 +35,18 @@ class CliTest(unittest.TestCase):
         self.assertIn(8000, calls)
 
     def test_cli_rejects_invalid_single_port_ranges(self):
-        with self.assertRaises(SystemExit):
+        with self.assertRaises(SystemExit) as low_port:
             main(["0"])
+        self.assertIn("Port must be between", str(low_port.exception))
 
-        with self.assertRaises(SystemExit):
+        with self.assertRaises(SystemExit) as high_port:
             main(["65536"])
+        self.assertIn("Port must be between", str(high_port.exception))
+
+    def test_cli_rejects_unknown_commands(self):
+        with self.assertRaises(SystemExit) as invalid_command:
+            main(["unknown-command"])
+        self.assertIn("Unknown command or invalid port", str(invalid_command.exception))
 
     def test_cli_rejects_invalid_scan_port_ranges(self):
         with self.assertRaises(SystemExit):
