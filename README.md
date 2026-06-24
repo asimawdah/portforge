@@ -30,11 +30,28 @@ Scan common development ports:
 portforge scan
 ```
 
+Scan a named preset:
+
+```bash
+portforge scan --preset frontend
+```
+
+Available presets:
+
+| Preset | Ports |
+| --- | --- |
+| `common` | `3000`, `3001`, `5173`, `8000`, `8080`, `5000`, `5432`, `3306`, `6379` |
+| `frontend` | `3000`, `3001`, `4173`, `5173`, `8080` |
+| `backend` | `5000`, `8000`, `8080`, `9000` |
+| `databases` | `3306`, `5432`, `6379`, `27017` |
+
 Scan custom ports:
 
 ```bash
 portforge scan -p 3000,5173,8000
 ```
+
+Manual ports passed with `--ports` override the selected preset.
 
 Output JSON:
 
@@ -67,6 +84,7 @@ PortForge is designed for local development workflows on Unix-like systems where
 
 ## CLI shortcuts
 
+- `--preset`: named port preset for scan when `--ports` is not provided
 - `-p`, `--ports`: comma-separated ports for scan
 - `-j`, `--json`: output JSON
 - `-o`, `--output`: write output to file
