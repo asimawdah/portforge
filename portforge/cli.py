@@ -61,6 +61,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         port = _parse_port(args.command)
     except ValueError as exc:
+        if _looks_like_port(args.command):
+            raise SystemExit(str(exc)) from exc
         raise SystemExit(f"Unknown command or invalid port: {args.command}") from exc
 
     check = check_port(port)
@@ -92,6 +94,10 @@ def _parse_port(value: str) -> int:
     except ValueError as exc:
         raise ValueError(f"Invalid port number: {value}") from exc
     return _validate_port(port)
+
+
+def _looks_like_port(value: str) -> bool:
+    return value.lstrip("+-").isdigit()
 
 
 def _validate_port(port: int) -> int:
