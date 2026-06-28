@@ -14,11 +14,20 @@ class FormattersTest(unittest.TestCase):
         self.assertIn("Port 3000 is busy", text)
         self.assertIn("node", text)
         self.assertIn("portforge kill 3000", text)
+        self.assertIn("Common use", text)
+        self.assertIn("Node/Next.js/React dev server", text)
 
     def test_format_port_report_for_free_port(self):
         text = format_port_report(PortCheck(port=5173, processes=[]))
 
         self.assertIn("Port 5173 is free", text)
+        self.assertIn("Vite dev server", text)
+
+    def test_format_port_report_omits_hint_for_unknown_port(self):
+        text = format_port_report(PortCheck(port=12345, processes=[]))
+
+        self.assertIn("Port 12345 is free", text)
+        self.assertNotIn("Common use", text)
 
     def test_format_scan_report_lists_busy_and_free_ports(self):
         checks = [
@@ -33,12 +42,15 @@ class FormattersTest(unittest.TestCase):
         self.assertIn("busy", text)
         self.assertIn("5173", text)
         self.assertIn("free", text)
+        self.assertIn("Node/Next.js/React dev server", text)
+        self.assertIn("Vite dev server", text)
 
     def test_to_json_outputs_machine_readable_report(self):
         data = json.loads(to_json([PortCheck(port=3000, processes=[])]))
 
         self.assertEqual(data[0]["port"], 3000)
         self.assertFalse(data[0]["busy"])
+        self.assertEqual(data[0]["hint"]["service"], "Node/Next.js/React dev server")
 
 
 if __name__ == "__main__":
