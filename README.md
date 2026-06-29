@@ -53,6 +53,18 @@ portforge scan -p 3000,5173,8000
 
 Manual ports passed with `--ports` override the selected preset.
 
+Run a platform readiness check:
+
+```bash
+portforge doctor
+```
+
+Output diagnostics as JSON for CI or bug reports:
+
+```bash
+portforge doctor --json -o portforge-doctor.json
+```
+
 Output JSON:
 
 ```bash
@@ -77,10 +89,30 @@ portforge kill 3000 --yes
 - Prefer the normal kill command first; use `--force` only when a process does not stop cleanly.
 - Avoid running kill commands against system services or processes you do not recognize.
 - When using `--json` or `--output`, review files before sharing them because command paths can include local usernames or project names.
+- Run `portforge doctor` before reporting platform-specific failures so missing tools or unsupported environments are clear.
 
 ## Platform support
 
-PortForge is designed for local development workflows on Unix-like systems where process and port inspection tools are available. Windows support is planned, but it may require different process lookup behavior.
+PortForge is designed for local development workflows on Unix-like systems where process and port inspection tools are available.
+
+| Platform | Expected behavior |
+| --- | --- |
+| macOS | Uses `lsof` for TCP listener lookup and `ps` for command enrichment. |
+| Linux | Uses `lsof` when available, then falls back to `ss`; `ps` enriches command output. |
+| Windows | Native process lookup is planned. Use WSL for the current Unix-style backend. |
+
+If port checks return no process for a busy port, run:
+
+```bash
+portforge doctor
+```
+
+Common causes:
+
+- `lsof` and `ss` are both missing.
+- Process details require higher permissions.
+- The port is busy on a protocol or address family outside the current TCP listener lookup.
+- Native Windows process lookup is being used instead of WSL.
 
 ## CLI shortcuts
 
@@ -115,10 +147,36 @@ PORT     STATUS   PROCESS
 8000     busy     python
 ```
 
+```text
+$ portforge doctor
+PortForge diagnostics
+
+Platform: Darwin 25.0 (arm64)
+Ready: yes
+
+Required tools:
+  ps       ok (/bin/ps)
+
+Port check tools:
+  lsof     ok (/usr/sbin/lsof)
+  ss       missing
+
+Notes:
+- macOS usually works best with lsof available from the base system.
+```
+
 ## Development
 
 ```bash
 python3 -m unittest discover -s tests -v
+```
+
+Manual cross-platform checks before release:
+
+```bash
+portforge doctor
+portforge scan --preset frontend
+portforge 3000 --json
 ```
 
 ## Roadmap
@@ -127,6 +185,7 @@ python3 -m unittest discover -s tests -v
 - [x] Scan common development ports
 - [x] JSON output
 - [x] Safe port freeing with explicit confirmation
+- [x] Platform diagnostics with `portforge doctor`
 - [ ] Interactive confirmation
 - [ ] Project directory detection from process cwd
 - [ ] Windows support improvements
