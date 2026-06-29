@@ -114,6 +114,12 @@ Common causes:
 - The port is busy on a protocol or address family outside the current TCP listener lookup.
 - Native Windows process lookup is being used instead of WSL.
 
+The diagnostics report now includes:
+
+- `Active backend`: the first available lookup backend PortForge will use, such as `lsof`, `ss`, or `none`.
+- `Recommended actions`: install or environment steps to make port checks reliable.
+- JSON fields for `active_backend`, `missing_required_tools`, `missing_port_check_tools`, and `recommended_actions`.
+
 ## CLI shortcuts
 
 - `--preset`: named port preset for scan when `--ports` is not provided
@@ -153,6 +159,7 @@ PortForge diagnostics
 
 Platform: Darwin 25.0 (arm64)
 Ready: yes
+Active backend: lsof
 
 Required tools:
   ps       ok (/bin/ps)
@@ -162,7 +169,11 @@ Port check tools:
   ss       missing
 
 Notes:
+- PortForge will use lsof first for TCP listener checks.
 - macOS usually works best with lsof available from the base system.
+
+Recommended actions:
+- Run `portforge scan --preset frontend` or `portforge 3000` to verify runtime behavior.
 ```
 
 ## Development
