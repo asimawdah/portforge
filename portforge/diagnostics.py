@@ -7,6 +7,9 @@ from dataclasses import dataclass
 
 REQUIRED_TOOLS = ("ps",)
 PORT_CHECK_TOOLS = ("lsof", "ss")
+DIAGNOSTICS_SCHEMA_VERSION = 1
+LOOKUP_SCOPE = "listening_tcp_ports"
+SUPPORTED_SYSTEMS = {"darwin", "linux"}
 
 
 @dataclass(frozen=True)
@@ -28,12 +31,20 @@ class PlatformDiagnostics:
     port_check_tools: list[ToolStatus]
 
     @property
+    def system_key(self) -> str:
+        return self.system.lower()
+
+    @property
+    def supported_platform(self) -> bool:
+        return self.system_key in SUPPORTED_SYSTEMS
+
+    @property
     def has_port_checker(self) -> bool:
         return any(tool.available for tool in self.port_check_tools)
 
     @property
     def ready(self) -> bool:
-        return self.has_port_checker and all(tool.available for tool in self.required_tools)
+        return self.supported_platform and self.has_port_checker and all(tool.available for tool in self.required_tools)
 
     @property
     def active_backend(self) -> str | None:
@@ -54,10 +65,13 @@ class PlatformDiagnostics:
 
     def to_dict(self) -> dict[str, object]:
         return {
+            "schema_version": DIAGNOSTICS_SCHEMA_VERSION,
             "system": self.system,
             "release": self.release,
             "machine": self.machine,
+            "supported_platform": self.supported_platform,
             "ready": self.ready,
+            "lookup_scope": LOOKUP_SCOPE,
             "has_port_checker": self.has_port_checker,
             "active_backend": self.active_backend,
             "missing_required_tools": self.missing_required_tools,
@@ -84,7 +98,9 @@ def format_diagnostics_report(diagnostics: PlatformDiagnostics) -> str:
         "PortForge diagnostics",
         "",
         f"Platform: {diagnostics.system} {diagnostics.release} ({diagnostics.machine})",
+        f"Supported platform: {'yes' if diagnostics.supported_platform else 'no'}",
         f"Ready: {'yes' if diagnostics.ready else 'no'}",
+        f"Lookup scope: {LOOKUP_SCOPE}",
         f"Active backend: {diagnostics.active_backend or 'none'}",
         "",
         "Required tools:",
@@ -113,23 +129,32 @@ def diagnostic_notes(diagnostics: PlatformDiagnostics) -> list[str]:
     notes: list[str] = []
     if diagnostics.active_backend:
         notes.append(f"PortForge will use {diagnostics.active_backend} first for TCP listener checks.")
+    notes.append("PortForge checks listening TCP ports; UDP and non-listening socket states are outside this diagnostic scope.")
+    if not diagnostics.supported_platform:
+        notes.append("This platform is not yet supported by the current Unix-style lookup backend.")
     if not diagnostics.has_port_checker:
         notes.append("Install lsof or ss so PortForge can inspect listening TCP ports.")
     if diagnostics.missing_required_tools:
         tools = ", ".join(diagnostics.missing_required_tools)
         notes.append(f"Install missing required tool(s): {tools}.")
-    if diagnostics.system.lower() == "windows":
+    if diagnostics.system_key == "windows":
         notes.append("Native Windows process lookup is not implemented yet; use WSL for the current Unix-style backend.")
-    if diagnostics.system.lower() == "darwin":
+    if diagnostics.system_key == "darwin":
         notes.append("macOS usually works best with lsof available from the base system.")
-    if diagnostics.system.lower() == "linux":
+    if diagnostics.system_key == "linux":
         notes.append("Linux can use lsof or ss; some process details may require sufficient permissions.")
     return notes
 
 
 def recommended_actions(diagnostics: PlatformDiagnostics) -> list[str]:
     actions: list[str] = []
-    system = diagnostics.system.lower()
+    system = diagnostics.system_key
+
+    if not diagnostics.supported_platform:
+        if system == "windows":
+            actions.append("Run PortForge inside WSL until native Windows lookup is implemented.")
+        else:
+            actions.append("Use macOS, Linux, or WSL for reliable PortForge listener checks.")
 
     if not diagnostics.has_port_checker:
         if system == "darwin":
@@ -147,7 +172,7 @@ def recommended_actions(diagnostics: PlatformDiagnostics) -> list[str]:
     if diagnostics.ready:
         actions.append("Run `portforge scan --preset frontend` or `portforge 3000` to verify runtime behavior.")
 
-    return actions
+    return _dedupe(actions)
 
 
 def _tool_status(name: str) -> ToolStatus:
@@ -159,3 +184,13 @@ def _format_tool_line(tool: ToolStatus) -> str:
     status = "ok" if tool.available else "missing"
     suffix = f" ({tool.path})" if tool.path else ""
     return f"  {tool.name:<8} {status}{suffix}"
+
+
+def _dedupe(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for value in values:
+        if value not in seen:
+            seen.add(value)
+            result.append(value)
+    return result
