@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 
 from .checker import check_port, kill_processes
+from .diagnostics import collect_diagnostics, format_diagnostics_report
 from .formatters import format_port_report, format_scan_report, to_json
 from .presets import DEFAULT_PRESET, PORT_PRESETS
 
@@ -16,7 +17,7 @@ def build_parser() -> argparse.ArgumentParser:
         prog="portforge",
         description="Find and free busy development ports in seconds.",
     )
-    parser.add_argument("command", nargs="?", default="scan", help="Port number, 'scan', or 'kill'")
+    parser.add_argument("command", nargs="?", default="scan", help="Port number, 'scan', 'kill', or 'doctor'")
     parser.add_argument("port", nargs="?", type=int, help="Port number for kill command")
     parser.add_argument(
         "--preset",
@@ -34,6 +35,12 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+
+    if args.command == "doctor":
+        diagnostics = collect_diagnostics()
+        output = to_json([diagnostics]) if args.json else format_diagnostics_report(diagnostics)
+        _emit(output, args.output)
+        return 0 if diagnostics.ready else 1
 
     if args.command == "scan":
         ports = _parse_ports(args.ports) if args.ports else PORT_PRESETS[args.preset]
