@@ -111,14 +111,16 @@ Common causes:
 
 - `lsof` and `ss` are both missing.
 - Process details require higher permissions.
-- The port is busy on a protocol or address family outside the current TCP listener lookup.
+- The port is busy on UDP or on a socket state outside the current listening TCP lookup scope.
 - Native Windows process lookup is being used instead of WSL.
 
 The diagnostics report now includes:
 
+- `Supported platform`: whether the current OS is expected to work with PortForge's current backend.
+- `Lookup scope`: the diagnostic scope, currently `listening_tcp_ports`.
 - `Active backend`: the first available lookup backend PortForge will use, such as `lsof`, `ss`, or `none`.
 - `Recommended actions`: install or environment steps to make port checks reliable.
-- JSON fields for `active_backend`, `missing_required_tools`, `missing_port_check_tools`, and `recommended_actions`.
+- JSON fields for `schema_version`, `supported_platform`, `lookup_scope`, `active_backend`, `missing_required_tools`, `missing_port_check_tools`, and `recommended_actions`.
 
 ## CLI shortcuts
 
@@ -158,7 +160,9 @@ $ portforge doctor
 PortForge diagnostics
 
 Platform: Darwin 25.0 (arm64)
+Supported platform: yes
 Ready: yes
+Lookup scope: listening_tcp_ports
 Active backend: lsof
 
 Required tools:
@@ -170,6 +174,7 @@ Port check tools:
 
 Notes:
 - PortForge will use lsof first for TCP listener checks.
+- PortForge checks listening TCP ports; UDP and non-listening socket states are outside this diagnostic scope.
 - macOS usually works best with lsof available from the base system.
 
 Recommended actions:
