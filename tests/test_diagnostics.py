@@ -19,6 +19,8 @@ class DiagnosticsTest(unittest.TestCase):
         self.assertTrue(diagnostics.ready)
         self.assertTrue(diagnostics.has_port_checker)
         self.assertEqual(diagnostics.system, "Linux")
+        self.assertEqual(diagnostics.active_backend, "lsof")
+        self.assertEqual(diagnostics.missing_required_tools, [])
 
     def test_collect_diagnostics_reports_missing_port_checker(self):
         def fake_which(name):
@@ -35,9 +37,30 @@ class DiagnosticsTest(unittest.TestCase):
 
         self.assertFalse(diagnostics.ready)
         self.assertFalse(diagnostics.has_port_checker)
-        self.assertIn("Install lsof or ss", " ".join(diagnostics.to_dict()["notes"]))
+        self.assertIsNone(diagnostics.active_backend)
+        payload = diagnostics.to_dict()
+        self.assertIn("Install lsof or ss", " ".join(payload["notes"]))
+        self.assertIn("Install lsof or iproute2/ss", " ".join(payload["recommended_actions"]))
+        self.assertEqual(payload["missing_port_check_tools"], ["lsof", "ss"])
 
-    def test_format_diagnostics_report_includes_platform_and_notes(self):
+    def test_collect_diagnostics_uses_ss_when_lsof_is_missing(self):
+        def fake_which(name):
+            if name == "lsof":
+                return None
+            return f"/usr/bin/{name}"
+
+        with patch("portforge.diagnostics.platform.system", return_value="Linux"), patch(
+            "portforge.diagnostics.platform.release", return_value="6.0"
+        ), patch("portforge.diagnostics.platform.machine", return_value="x86_64"), patch(
+            "portforge.diagnostics.shutil.which", side_effect=fake_which
+        ):
+            diagnostics = collect_diagnostics()
+
+        self.assertTrue(diagnostics.ready)
+        self.assertEqual(diagnostics.active_backend, "ss")
+        self.assertEqual(diagnostics.missing_port_check_tools, ["lsof"])
+
+    def test_format_diagnostics_report_includes_platform_notes_and_actions(self):
         def fake_which(name):
             return None
 
@@ -51,9 +74,11 @@ class DiagnosticsTest(unittest.TestCase):
         self.assertIn("PortForge diagnostics", report)
         self.assertIn("Platform: Darwin 25.0 (arm64)", report)
         self.assertIn("Ready: no", report)
+        self.assertIn("Active backend: none", report)
         self.assertIn("lsof", report)
         self.assertIn("ss", report)
         self.assertIn("macOS", report)
+        self.assertIn("Recommended actions", report)
 
 
 if __name__ == "__main__":
