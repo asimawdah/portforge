@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import platform
 import shutil
 from dataclasses import dataclass
@@ -14,6 +15,9 @@ SUPPORTED_SYSTEMS = {"darwin", "linux"}
 STATUS_READY = "ready"
 STATUS_DEGRADED = "degraded"
 STATUS_UNSUPPORTED = "unsupported"
+PERMISSION_SCOPE_ELEVATED = "elevated"
+PERMISSION_SCOPE_USER = "user"
+PERMISSION_SCOPE_UNKNOWN = "unknown"
 
 
 @dataclass(frozen=True)
@@ -34,6 +38,7 @@ class PlatformDiagnostics:
     required_tools: list[ToolStatus]
     port_check_tools: list[ToolStatus]
     environment: str = "native"
+    uid: int | None = None
 
     @property
     def system_key(self) -> str:
@@ -85,6 +90,20 @@ class PlatformDiagnostics:
         return [tool.name for tool in self.port_check_tools if not tool.available]
 
     @property
+    def is_elevated(self) -> bool | None:
+        if self.uid is None:
+            return None
+        return self.uid == 0
+
+    @property
+    def permission_scope(self) -> str:
+        if self.is_elevated is None:
+            return PERMISSION_SCOPE_UNKNOWN
+        if self.is_elevated:
+            return PERMISSION_SCOPE_ELEVATED
+        return PERMISSION_SCOPE_USER
+
+    @property
     def failure_reasons(self) -> list[str]:
         reasons: list[str] = []
         if not self.supported_platform:
@@ -103,6 +122,9 @@ class PlatformDiagnostics:
             "machine": self.machine,
             "environment": self.environment,
             "is_wsl": self.is_wsl,
+            "uid": self.uid,
+            "elevated": self.is_elevated,
+            "permission_scope": self.permission_scope,
             "supported_platform": self.supported_platform,
             "ready": self.ready,
             "status": self.status,
@@ -128,9 +150,26 @@ def collect_diagnostics() -> PlatformDiagnostics:
         release=release,
         machine=platform.machine() or "unknown",
         environment=detect_environment(system, release, version),
+        uid=current_uid(),
         required_tools=[_tool_status(tool) for tool in REQUIRED_TOOLS],
         port_check_tools=[_tool_status(tool) for tool in PORT_CHECK_TOOLS],
     )
+
+
+def current_uid() -> int | None:
+    """Return the current POSIX user id when available.
+
+    Windows does not expose ``os.geteuid``. Keeping this value optional lets JSON
+    diagnostics stay stable across native Windows, WSL, macOS, and Linux.
+    """
+
+    get_euid = getattr(os, "geteuid", None)
+    if get_euid is None:
+        return None
+    try:
+        return int(get_euid())
+    except OSError:
+        return None
 
 
 def detect_environment(system: str, release: str, version: str, os_release_path: str | Path = "/proc/version") -> str:
@@ -160,6 +199,7 @@ def format_diagnostics_report(diagnostics: PlatformDiagnostics) -> str:
         "",
         f"Platform: {diagnostics.system} {diagnostics.release} ({diagnostics.machine})",
         f"Environment: {diagnostics.environment}",
+        f"Permission scope: {diagnostics.permission_scope}",
         f"Supported platform: {'yes' if diagnostics.supported_platform else 'no'}",
         f"Ready: {'yes' if diagnostics.ready else 'no'}",
         f"Status: {diagnostics.status}",
@@ -196,6 +236,10 @@ def diagnostic_notes(diagnostics: PlatformDiagnostics) -> list[str]:
     if diagnostics.active_backend:
         notes.append(f"PortForge will use {diagnostics.active_backend} first for TCP listener checks.")
     notes.append("PortForge checks listening TCP ports; UDP and non-listening socket states are outside this diagnostic scope.")
+    if diagnostics.permission_scope == PERMISSION_SCOPE_USER:
+        notes.append("Non-elevated scans may hide process names or owners for listeners owned by other users.")
+    if diagnostics.permission_scope == PERMISSION_SCOPE_UNKNOWN:
+        notes.append("Permission scope could not be detected on this platform, so process visibility may vary.")
     if diagnostics.is_wsl:
         notes.append("WSL is detected; PortForge will inspect the Linux/WSL network namespace, not native Windows processes.")
     if not diagnostics.supported_platform:
@@ -226,6 +270,9 @@ def recommended_actions(diagnostics: PlatformDiagnostics) -> list[str]:
 
     if diagnostics.is_wsl and diagnostics.ready:
         actions.append("Run the command from the same WSL distro that owns the development server you want to inspect.")
+
+    if diagnostics.permission_scope == PERMISSION_SCOPE_USER:
+        actions.append("If process names or owners are incomplete, rerun the same check with elevated permissions.")
 
     if not diagnostics.has_port_checker:
         if system == "darwin":
