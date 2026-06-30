@@ -65,6 +65,8 @@ Output diagnostics as JSON for CI or bug reports:
 portforge doctor --json -o portforge-doctor.json
 ```
 
+`doctor --json` writes one JSON object because it represents one machine diagnostic report. Port and scan JSON output remains a list of port check objects.
+
 Output JSON:
 
 ```bash
@@ -188,6 +190,18 @@ Notes:
 
 Recommended actions:
 - Run `portforge scan --preset frontend` or `portforge 3000` to verify runtime behavior.
+```
+
+```json
+{
+  "schema_version": 2,
+  "environment": "native",
+  "ready": true,
+  "status": "ready",
+  "failure_reasons": [],
+  "lookup_scope": "listening_tcp_ports",
+  "active_backend": "lsof"
+}
 ```
 
 When `Status` is `degraded` or `unsupported`, inspect `Failure reasons` first. Those values are stable enough for CI logs, issue templates, and bug reports.
