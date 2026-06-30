@@ -17,7 +17,7 @@ class DiagnosticsTest(unittest.TestCase):
             "portforge.diagnostics.platform.machine", return_value="x86_64"
         ), patch("portforge.diagnostics.shutil.which", side_effect=fake_which), patch(
             "portforge.diagnostics.Path.read_text", side_effect=OSError
-        ):
+        ), patch("portforge.diagnostics.os.geteuid", return_value=0):
             diagnostics = collect_diagnostics()
 
         self.assertTrue(diagnostics.ready)
@@ -30,6 +30,9 @@ class DiagnosticsTest(unittest.TestCase):
         self.assertEqual(diagnostics.failure_reasons, [])
         self.assertEqual(diagnostics.active_backend, "lsof")
         self.assertEqual(diagnostics.missing_required_tools, [])
+        self.assertEqual(diagnostics.uid, 0)
+        self.assertTrue(diagnostics.is_elevated)
+        self.assertEqual(diagnostics.permission_scope, "elevated")
 
     def test_collect_diagnostics_reports_missing_port_checker(self):
         def fake_which(name):
@@ -43,7 +46,7 @@ class DiagnosticsTest(unittest.TestCase):
             "portforge.diagnostics.platform.machine", return_value="x86_64"
         ), patch("portforge.diagnostics.shutil.which", side_effect=fake_which), patch(
             "portforge.diagnostics.Path.read_text", side_effect=OSError
-        ):
+        ), patch("portforge.diagnostics.os.geteuid", return_value=1000):
             diagnostics = collect_diagnostics()
 
         self.assertFalse(diagnostics.ready)
@@ -57,10 +60,15 @@ class DiagnosticsTest(unittest.TestCase):
         self.assertEqual(payload["status"], "degraded")
         self.assertEqual(payload["environment"], "native")
         self.assertFalse(payload["is_wsl"])
+        self.assertEqual(payload["uid"], 1000)
+        self.assertFalse(payload["elevated"])
+        self.assertEqual(payload["permission_scope"], "user")
         self.assertEqual(payload["failure_reasons"], ["missing_port_check_backend"])
         self.assertTrue(payload["supported_platform"])
         self.assertIn("Install lsof or ss", " ".join(payload["notes"]))
+        self.assertIn("process names or owners", " ".join(payload["notes"]))
         self.assertIn("Install lsof or iproute2/ss", " ".join(payload["recommended_actions"]))
+        self.assertIn("elevated permissions", " ".join(payload["recommended_actions"]))
         self.assertEqual(payload["missing_port_check_tools"], ["lsof", "ss"])
 
     def test_collect_diagnostics_uses_ss_when_lsof_is_missing(self):
@@ -157,12 +165,13 @@ class DiagnosticsTest(unittest.TestCase):
             "portforge.diagnostics.platform.release", return_value="25.0"
         ), patch("portforge.diagnostics.platform.machine", return_value="arm64"), patch(
             "portforge.diagnostics.shutil.which", side_effect=fake_which
-        ):
+        ), patch("portforge.diagnostics.os.geteuid", return_value=501):
             report = format_diagnostics_report(collect_diagnostics())
 
         self.assertIn("PortForge diagnostics", report)
         self.assertIn("Platform: Darwin 25.0 (arm64)", report)
         self.assertIn("Environment: native", report)
+        self.assertIn("Permission scope: user", report)
         self.assertIn("Supported platform: yes", report)
         self.assertIn("Ready: no", report)
         self.assertIn("Status: degraded", report)
@@ -172,7 +181,25 @@ class DiagnosticsTest(unittest.TestCase):
         self.assertIn("lsof", report)
         self.assertIn("ss", report)
         self.assertIn("macOS", report)
+        self.assertIn("process names or owners", report)
         self.assertIn("Recommended actions", report)
+
+    def test_unknown_permission_scope_is_stable_for_non_posix_platforms(self):
+        def fake_which(name):
+            return f"/usr/bin/{name}"
+
+        with patch("portforge.diagnostics.platform.system", return_value="Windows"), patch(
+            "portforge.diagnostics.platform.release", return_value="11"
+        ), patch("portforge.diagnostics.platform.machine", return_value="AMD64"), patch(
+            "portforge.diagnostics.shutil.which", side_effect=fake_which
+        ), patch("portforge.diagnostics.os.geteuid", side_effect=AttributeError):
+            diagnostics = collect_diagnostics()
+
+        payload = diagnostics.to_dict()
+        self.assertIsNone(payload["uid"])
+        self.assertIsNone(payload["elevated"])
+        self.assertEqual(payload["permission_scope"], "unknown")
+        self.assertIn("Permission scope could not be detected", " ".join(payload["notes"]))
 
 
 if __name__ == "__main__":
