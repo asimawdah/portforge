@@ -1,7 +1,9 @@
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
-from portforge.diagnostics import collect_diagnostics, format_diagnostics_report
+from portforge.diagnostics import collect_diagnostics, detect_environment, format_diagnostics_report
 
 
 class DiagnosticsTest(unittest.TestCase):
@@ -11,8 +13,10 @@ class DiagnosticsTest(unittest.TestCase):
 
         with patch("portforge.diagnostics.platform.system", return_value="Linux"), patch(
             "portforge.diagnostics.platform.release", return_value="6.0"
-        ), patch("portforge.diagnostics.platform.machine", return_value="x86_64"), patch(
-            "portforge.diagnostics.shutil.which", side_effect=fake_which
+        ), patch("portforge.diagnostics.platform.version", return_value="#1 SMP"), patch(
+            "portforge.diagnostics.platform.machine", return_value="x86_64"
+        ), patch("portforge.diagnostics.shutil.which", side_effect=fake_which), patch(
+            "portforge.diagnostics.Path.read_text", side_effect=OSError
         ):
             diagnostics = collect_diagnostics()
 
@@ -20,6 +24,8 @@ class DiagnosticsTest(unittest.TestCase):
         self.assertTrue(diagnostics.has_port_checker)
         self.assertTrue(diagnostics.supported_platform)
         self.assertEqual(diagnostics.system, "Linux")
+        self.assertEqual(diagnostics.environment, "native")
+        self.assertFalse(diagnostics.is_wsl)
         self.assertEqual(diagnostics.status, "ready")
         self.assertEqual(diagnostics.failure_reasons, [])
         self.assertEqual(diagnostics.active_backend, "lsof")
@@ -33,8 +39,10 @@ class DiagnosticsTest(unittest.TestCase):
 
         with patch("portforge.diagnostics.platform.system", return_value="Linux"), patch(
             "portforge.diagnostics.platform.release", return_value="6.0"
-        ), patch("portforge.diagnostics.platform.machine", return_value="x86_64"), patch(
-            "portforge.diagnostics.shutil.which", side_effect=fake_which
+        ), patch("portforge.diagnostics.platform.version", return_value="#1 SMP"), patch(
+            "portforge.diagnostics.platform.machine", return_value="x86_64"
+        ), patch("portforge.diagnostics.shutil.which", side_effect=fake_which), patch(
+            "portforge.diagnostics.Path.read_text", side_effect=OSError
         ):
             diagnostics = collect_diagnostics()
 
@@ -44,9 +52,11 @@ class DiagnosticsTest(unittest.TestCase):
         self.assertEqual(diagnostics.status, "degraded")
         self.assertEqual(diagnostics.failure_reasons, ["missing_port_check_backend"])
         payload = diagnostics.to_dict()
-        self.assertEqual(payload["schema_version"], 1)
+        self.assertEqual(payload["schema_version"], 2)
         self.assertEqual(payload["lookup_scope"], "listening_tcp_ports")
         self.assertEqual(payload["status"], "degraded")
+        self.assertEqual(payload["environment"], "native")
+        self.assertFalse(payload["is_wsl"])
         self.assertEqual(payload["failure_reasons"], ["missing_port_check_backend"])
         self.assertTrue(payload["supported_platform"])
         self.assertIn("Install lsof or ss", " ".join(payload["notes"]))
@@ -61,8 +71,10 @@ class DiagnosticsTest(unittest.TestCase):
 
         with patch("portforge.diagnostics.platform.system", return_value="Linux"), patch(
             "portforge.diagnostics.platform.release", return_value="6.0"
-        ), patch("portforge.diagnostics.platform.machine", return_value="x86_64"), patch(
-            "portforge.diagnostics.shutil.which", side_effect=fake_which
+        ), patch("portforge.diagnostics.platform.version", return_value="#1 SMP"), patch(
+            "portforge.diagnostics.platform.machine", return_value="x86_64"
+        ), patch("portforge.diagnostics.shutil.which", side_effect=fake_which), patch(
+            "portforge.diagnostics.Path.read_text", side_effect=OSError
         ):
             diagnostics = collect_diagnostics()
 
@@ -85,6 +97,7 @@ class DiagnosticsTest(unittest.TestCase):
         payload = diagnostics.to_dict()
         self.assertFalse(diagnostics.ready)
         self.assertFalse(diagnostics.supported_platform)
+        self.assertEqual(diagnostics.environment, "native")
         self.assertEqual(diagnostics.status, "unsupported")
         self.assertEqual(diagnostics.failure_reasons, ["unsupported_platform"])
         self.assertFalse(payload["supported_platform"])
@@ -99,8 +112,10 @@ class DiagnosticsTest(unittest.TestCase):
 
         with patch("portforge.diagnostics.platform.system", return_value="Linux"), patch(
             "portforge.diagnostics.platform.release", return_value="6.0"
-        ), patch("portforge.diagnostics.platform.machine", return_value="x86_64"), patch(
-            "portforge.diagnostics.shutil.which", side_effect=fake_which
+        ), patch("portforge.diagnostics.platform.version", return_value="#1 SMP"), patch(
+            "portforge.diagnostics.platform.machine", return_value="x86_64"
+        ), patch("portforge.diagnostics.shutil.which", side_effect=fake_which), patch(
+            "portforge.diagnostics.Path.read_text", side_effect=OSError
         ):
             diagnostics = collect_diagnostics()
 
@@ -108,6 +123,31 @@ class DiagnosticsTest(unittest.TestCase):
         self.assertEqual(diagnostics.status, "degraded")
         self.assertEqual(diagnostics.failure_reasons, ["missing_required_tools"])
         self.assertEqual(diagnostics.missing_required_tools, ["ps"])
+
+    def test_detect_environment_marks_wsl_from_release_or_proc_version(self):
+        self.assertEqual(detect_environment("Linux", "5.15.90.1-microsoft-standard-WSL2", "#1 SMP"), "wsl")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            proc_version = Path(tmp) / "version"
+            proc_version.write_text("Linux version with Microsoft WSL marker", encoding="utf-8")
+            self.assertEqual(detect_environment("Linux", "6.0", "#1 SMP", proc_version), "wsl")
+
+    def test_wsl_diagnostics_include_namespace_note_and_action(self):
+        def fake_which(name):
+            return f"/usr/bin/{name}"
+
+        with patch("portforge.diagnostics.platform.system", return_value="Linux"), patch(
+            "portforge.diagnostics.platform.release", return_value="5.15.90.1-microsoft-standard-WSL2"
+        ), patch("portforge.diagnostics.platform.version", return_value="#1 SMP"), patch(
+            "portforge.diagnostics.platform.machine", return_value="x86_64"
+        ), patch("portforge.diagnostics.shutil.which", side_effect=fake_which):
+            diagnostics = collect_diagnostics()
+
+        payload = diagnostics.to_dict()
+        self.assertEqual(payload["environment"], "wsl")
+        self.assertTrue(payload["is_wsl"])
+        self.assertIn("Linux/WSL network namespace", " ".join(payload["notes"]))
+        self.assertIn("same WSL distro", " ".join(payload["recommended_actions"]))
 
     def test_format_diagnostics_report_includes_platform_notes_and_actions(self):
         def fake_which(name):
@@ -122,6 +162,7 @@ class DiagnosticsTest(unittest.TestCase):
 
         self.assertIn("PortForge diagnostics", report)
         self.assertIn("Platform: Darwin 25.0 (arm64)", report)
+        self.assertIn("Environment: native", report)
         self.assertIn("Supported platform: yes", report)
         self.assertIn("Ready: no", report)
         self.assertIn("Status: degraded", report)
