@@ -113,6 +113,7 @@ Common causes:
 - Process details require higher permissions.
 - The port is busy on UDP or on a socket state outside the current listening TCP lookup scope.
 - Native Windows process lookup is being used instead of WSL.
+- The command is run from a different WSL distro or namespace than the server process.
 
 The diagnostics report now includes:
 
@@ -122,8 +123,11 @@ The diagnostics report now includes:
 - `Failure reasons`: stable reason codes such as `unsupported_platform`, `missing_port_check_backend`, and `missing_required_tools`.
 - `Lookup scope`: the diagnostic scope, currently `listening_tcp_ports`.
 - `Active backend`: the first available lookup backend PortForge will use, such as `lsof`, `ss`, or `none`.
+- `Environment`: whether diagnostics are running in a native environment or WSL.
 - `Recommended actions`: install or environment steps to make port checks reliable.
-- JSON fields for `schema_version`, `supported_platform`, `ready`, `status`, `failure_reasons`, `lookup_scope`, `active_backend`, `missing_required_tools`, `missing_port_check_tools`, and `recommended_actions`.
+- JSON fields for `schema_version`, `system`, `release`, `machine`, `environment`, `is_wsl`, `supported_platform`, `ready`, `status`, `failure_reasons`, `lookup_scope`, `active_backend`, `missing_required_tools`, `missing_port_check_tools`, and `recommended_actions`.
+
+For WSL, PortForge reports `environment: wsl` and checks the Linux/WSL network namespace. Run PortForge from the same WSL distro that owns the development server you want to inspect.
 
 ## CLI shortcuts
 
@@ -163,6 +167,7 @@ $ portforge doctor
 PortForge diagnostics
 
 Platform: Darwin 25.0 (arm64)
+Environment: native
 Supported platform: yes
 Ready: yes
 Status: ready
@@ -197,6 +202,7 @@ Manual cross-platform checks before release:
 
 ```bash
 portforge doctor
+portforge doctor --json
 portforge scan --preset frontend
 portforge 3000 --json
 ```
