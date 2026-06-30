@@ -117,10 +117,13 @@ Common causes:
 The diagnostics report now includes:
 
 - `Supported platform`: whether the current OS is expected to work with PortForge's current backend.
+- `Ready`: whether PortForge has a supported OS, a port lookup backend, and required process tools.
+- `Status`: machine-readable state: `ready`, `degraded`, or `unsupported`.
+- `Failure reasons`: stable reason codes such as `unsupported_platform`, `missing_port_check_backend`, and `missing_required_tools`.
 - `Lookup scope`: the diagnostic scope, currently `listening_tcp_ports`.
 - `Active backend`: the first available lookup backend PortForge will use, such as `lsof`, `ss`, or `none`.
 - `Recommended actions`: install or environment steps to make port checks reliable.
-- JSON fields for `schema_version`, `supported_platform`, `lookup_scope`, `active_backend`, `missing_required_tools`, `missing_port_check_tools`, and `recommended_actions`.
+- JSON fields for `schema_version`, `supported_platform`, `ready`, `status`, `failure_reasons`, `lookup_scope`, `active_backend`, `missing_required_tools`, `missing_port_check_tools`, and `recommended_actions`.
 
 ## CLI shortcuts
 
@@ -162,6 +165,7 @@ PortForge diagnostics
 Platform: Darwin 25.0 (arm64)
 Supported platform: yes
 Ready: yes
+Status: ready
 Lookup scope: listening_tcp_ports
 Active backend: lsof
 
@@ -180,6 +184,8 @@ Notes:
 Recommended actions:
 - Run `portforge scan --preset frontend` or `portforge 3000` to verify runtime behavior.
 ```
+
+When `Status` is `degraded` or `unsupported`, inspect `Failure reasons` first. Those values are stable enough for CI logs, issue templates, and bug reports.
 
 ## Development
 
