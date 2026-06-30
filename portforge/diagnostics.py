@@ -168,7 +168,7 @@ def current_uid() -> int | None:
         return None
     try:
         return int(get_euid())
-    except OSError:
+    except (OSError, AttributeError, TypeError, ValueError):
         return None
 
 
