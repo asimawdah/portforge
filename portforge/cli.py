@@ -5,7 +5,7 @@ from pathlib import Path
 
 from .checker import check_port, kill_processes
 from .diagnostics import collect_diagnostics, format_diagnostics_report
-from .formatters import format_port_report, format_scan_report, to_json
+from .formatters import format_port_report, format_scan_report, to_json, to_json_object
 from .presets import DEFAULT_PRESET, PORT_PRESETS
 
 MIN_PORT = 1
@@ -38,7 +38,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "doctor":
         diagnostics = collect_diagnostics()
-        output = to_json([diagnostics]) if args.json else format_diagnostics_report(diagnostics)
+        output = to_json_object(diagnostics) if args.json else format_diagnostics_report(diagnostics)
         _emit(output, args.output)
         return 0 if diagnostics.ready else 1
 
