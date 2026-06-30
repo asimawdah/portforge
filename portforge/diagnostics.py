@@ -3,11 +3,12 @@ from __future__ import annotations
 import platform
 import shutil
 from dataclasses import dataclass
+from pathlib import Path
 
 
 REQUIRED_TOOLS = ("ps",)
 PORT_CHECK_TOOLS = ("lsof", "ss")
-DIAGNOSTICS_SCHEMA_VERSION = 1
+DIAGNOSTICS_SCHEMA_VERSION = 2
 LOOKUP_SCOPE = "listening_tcp_ports"
 SUPPORTED_SYSTEMS = {"darwin", "linux"}
 STATUS_READY = "ready"
@@ -32,10 +33,19 @@ class PlatformDiagnostics:
     machine: str
     required_tools: list[ToolStatus]
     port_check_tools: list[ToolStatus]
+    environment: str = "native"
 
     @property
     def system_key(self) -> str:
         return self.system.lower()
+
+    @property
+    def environment_key(self) -> str:
+        return self.environment.lower()
+
+    @property
+    def is_wsl(self) -> bool:
+        return self.environment_key == "wsl"
 
     @property
     def supported_platform(self) -> bool:
@@ -91,6 +101,8 @@ class PlatformDiagnostics:
             "system": self.system,
             "release": self.release,
             "machine": self.machine,
+            "environment": self.environment,
+            "is_wsl": self.is_wsl,
             "supported_platform": self.supported_platform,
             "ready": self.ready,
             "status": self.status,
@@ -108,13 +120,38 @@ class PlatformDiagnostics:
 
 
 def collect_diagnostics() -> PlatformDiagnostics:
+    system = platform.system() or "unknown"
+    release = platform.release() or "unknown"
+    version = platform.version() or ""
     return PlatformDiagnostics(
-        system=platform.system() or "unknown",
-        release=platform.release() or "unknown",
+        system=system,
+        release=release,
         machine=platform.machine() or "unknown",
+        environment=detect_environment(system, release, version),
         required_tools=[_tool_status(tool) for tool in REQUIRED_TOOLS],
         port_check_tools=[_tool_status(tool) for tool in PORT_CHECK_TOOLS],
     )
+
+
+def detect_environment(system: str, release: str, version: str, os_release_path: str | Path = "/proc/version") -> str:
+    """Return a stable environment label for diagnostics output."""
+
+    if system.lower() != "linux":
+        return "native"
+
+    haystack = f"{release}\n{version}".lower()
+    if "microsoft" in haystack or "wsl" in haystack:
+        return "wsl"
+
+    try:
+        proc_version = Path(os_release_path).read_text(encoding="utf-8", errors="ignore").lower()
+    except OSError:
+        proc_version = ""
+
+    if "microsoft" in proc_version or "wsl" in proc_version:
+        return "wsl"
+
+    return "native"
 
 
 def format_diagnostics_report(diagnostics: PlatformDiagnostics) -> str:
@@ -122,6 +159,7 @@ def format_diagnostics_report(diagnostics: PlatformDiagnostics) -> str:
         "PortForge diagnostics",
         "",
         f"Platform: {diagnostics.system} {diagnostics.release} ({diagnostics.machine})",
+        f"Environment: {diagnostics.environment}",
         f"Supported platform: {'yes' if diagnostics.supported_platform else 'no'}",
         f"Ready: {'yes' if diagnostics.ready else 'no'}",
         f"Status: {diagnostics.status}",
@@ -158,6 +196,8 @@ def diagnostic_notes(diagnostics: PlatformDiagnostics) -> list[str]:
     if diagnostics.active_backend:
         notes.append(f"PortForge will use {diagnostics.active_backend} first for TCP listener checks.")
     notes.append("PortForge checks listening TCP ports; UDP and non-listening socket states are outside this diagnostic scope.")
+    if diagnostics.is_wsl:
+        notes.append("WSL is detected; PortForge will inspect the Linux/WSL network namespace, not native Windows processes.")
     if not diagnostics.supported_platform:
         notes.append("This platform is not yet supported by the current Unix-style lookup backend.")
     if not diagnostics.has_port_checker:
@@ -183,6 +223,9 @@ def recommended_actions(diagnostics: PlatformDiagnostics) -> list[str]:
             actions.append("Run PortForge inside WSL until native Windows lookup is implemented.")
         else:
             actions.append("Use macOS, Linux, or WSL for reliable PortForge listener checks.")
+
+    if diagnostics.is_wsl and diagnostics.ready:
+        actions.append("Run the command from the same WSL distro that owns the development server you want to inspect.")
 
     if not diagnostics.has_port_checker:
         if system == "darwin":
