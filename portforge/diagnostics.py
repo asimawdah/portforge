@@ -10,6 +10,9 @@ PORT_CHECK_TOOLS = ("lsof", "ss")
 DIAGNOSTICS_SCHEMA_VERSION = 1
 LOOKUP_SCOPE = "listening_tcp_ports"
 SUPPORTED_SYSTEMS = {"darwin", "linux"}
+STATUS_READY = "ready"
+STATUS_DEGRADED = "degraded"
+STATUS_UNSUPPORTED = "unsupported"
 
 
 @dataclass(frozen=True)
@@ -47,6 +50,14 @@ class PlatformDiagnostics:
         return self.supported_platform and self.has_port_checker and all(tool.available for tool in self.required_tools)
 
     @property
+    def status(self) -> str:
+        if self.ready:
+            return STATUS_READY
+        if not self.supported_platform:
+            return STATUS_UNSUPPORTED
+        return STATUS_DEGRADED
+
+    @property
     def active_backend(self) -> str | None:
         """Return the first port-checking backend PortForge will try on this machine."""
 
@@ -63,6 +74,17 @@ class PlatformDiagnostics:
     def missing_port_check_tools(self) -> list[str]:
         return [tool.name for tool in self.port_check_tools if not tool.available]
 
+    @property
+    def failure_reasons(self) -> list[str]:
+        reasons: list[str] = []
+        if not self.supported_platform:
+            reasons.append("unsupported_platform")
+        if not self.has_port_checker:
+            reasons.append("missing_port_check_backend")
+        if self.missing_required_tools:
+            reasons.append("missing_required_tools")
+        return reasons
+
     def to_dict(self) -> dict[str, object]:
         return {
             "schema_version": DIAGNOSTICS_SCHEMA_VERSION,
@@ -71,6 +93,8 @@ class PlatformDiagnostics:
             "machine": self.machine,
             "supported_platform": self.supported_platform,
             "ready": self.ready,
+            "status": self.status,
+            "failure_reasons": self.failure_reasons,
             "lookup_scope": LOOKUP_SCOPE,
             "has_port_checker": self.has_port_checker,
             "active_backend": self.active_backend,
@@ -100,11 +124,15 @@ def format_diagnostics_report(diagnostics: PlatformDiagnostics) -> str:
         f"Platform: {diagnostics.system} {diagnostics.release} ({diagnostics.machine})",
         f"Supported platform: {'yes' if diagnostics.supported_platform else 'no'}",
         f"Ready: {'yes' if diagnostics.ready else 'no'}",
+        f"Status: {diagnostics.status}",
         f"Lookup scope: {LOOKUP_SCOPE}",
         f"Active backend: {diagnostics.active_backend or 'none'}",
-        "",
-        "Required tools:",
     ]
+
+    if diagnostics.failure_reasons:
+        lines.append(f"Failure reasons: {', '.join(diagnostics.failure_reasons)}")
+
+    lines.extend(["", "Required tools:"])
     lines.extend(_format_tool_line(tool) for tool in diagnostics.required_tools)
     lines.append("")
     lines.append("Port check tools:")
