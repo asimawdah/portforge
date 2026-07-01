@@ -30,6 +30,8 @@ class DiagnosticsTest(unittest.TestCase):
         self.assertEqual(diagnostics.failure_reasons, [])
         self.assertEqual(diagnostics.active_backend, "lsof")
         self.assertEqual(diagnostics.missing_required_tools, [])
+        self.assertEqual(diagnostics.missing_tools, [])
+        self.assertEqual(diagnostics.to_dict()["install_hints"], {})
         self.assertEqual(diagnostics.uid, 0)
         self.assertTrue(diagnostics.is_elevated)
         self.assertEqual(diagnostics.permission_scope, "elevated")
@@ -54,6 +56,7 @@ class DiagnosticsTest(unittest.TestCase):
         self.assertIsNone(diagnostics.active_backend)
         self.assertEqual(diagnostics.status, "degraded")
         self.assertEqual(diagnostics.failure_reasons, ["missing_port_check_backend"])
+        self.assertEqual(diagnostics.missing_tools, ["lsof", "ss"])
         payload = diagnostics.to_dict()
         self.assertEqual(payload["schema_version"], 2)
         self.assertEqual(payload["lookup_scope"], "listening_tcp_ports")
@@ -70,6 +73,9 @@ class DiagnosticsTest(unittest.TestCase):
         self.assertIn("Install lsof or iproute2/ss", " ".join(payload["recommended_actions"]))
         self.assertIn("elevated permissions", " ".join(payload["recommended_actions"]))
         self.assertEqual(payload["missing_port_check_tools"], ["lsof", "ss"])
+        self.assertEqual(payload["missing_tools"], ["lsof", "ss"])
+        self.assertIn("apt install lsof", payload["install_hints"]["lsof"])
+        self.assertIn("iproute2", payload["install_hints"]["ss"])
 
     def test_collect_diagnostics_uses_ss_when_lsof_is_missing(self):
         def fake_which(name):
@@ -90,6 +96,8 @@ class DiagnosticsTest(unittest.TestCase):
         self.assertEqual(diagnostics.status, "ready")
         self.assertEqual(diagnostics.active_backend, "ss")
         self.assertEqual(diagnostics.missing_port_check_tools, ["lsof"])
+        self.assertEqual(diagnostics.missing_tools, ["lsof"])
+        self.assertIn("lsof", diagnostics.to_dict()["install_hints"])
 
     def test_unsupported_platform_is_not_ready_even_when_tools_exist(self):
         def fake_which(name):
@@ -131,6 +139,8 @@ class DiagnosticsTest(unittest.TestCase):
         self.assertEqual(diagnostics.status, "degraded")
         self.assertEqual(diagnostics.failure_reasons, ["missing_required_tools"])
         self.assertEqual(diagnostics.missing_required_tools, ["ps"])
+        self.assertEqual(diagnostics.missing_tools, ["ps"])
+        self.assertIn("procps", diagnostics.to_dict()["install_hints"]["ps"])
 
     def test_detect_environment_marks_wsl_from_release_or_proc_version(self):
         self.assertEqual(detect_environment("Linux", "5.15.90.1-microsoft-standard-WSL2", "#1 SMP"), "wsl")
@@ -157,7 +167,7 @@ class DiagnosticsTest(unittest.TestCase):
         self.assertIn("Linux/WSL network namespace", " ".join(payload["notes"]))
         self.assertIn("same WSL distro", " ".join(payload["recommended_actions"]))
 
-    def test_format_diagnostics_report_includes_platform_notes_and_actions(self):
+    def test_format_diagnostics_report_includes_platform_notes_actions_and_install_hints(self):
         def fake_which(name):
             return None
 
@@ -180,6 +190,8 @@ class DiagnosticsTest(unittest.TestCase):
         self.assertIn("Active backend: none", report)
         self.assertIn("lsof", report)
         self.assertIn("ss", report)
+        self.assertIn("Install hints:", report)
+        self.assertIn("Xcode Command Line Tools", report)
         self.assertIn("macOS", report)
         self.assertIn("process names or owners", report)
         self.assertIn("Recommended actions", report)
