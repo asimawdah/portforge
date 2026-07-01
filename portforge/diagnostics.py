@@ -90,6 +90,20 @@ class PlatformDiagnostics:
         return STATUS_DEGRADED
 
     @property
+    def backend_priority(self) -> list[str]:
+        """Return the stable backend order PortForge will try for listener checks."""
+
+        return [tool.name for tool in self.port_check_tools]
+
+    @property
+    def available_port_check_tools(self) -> list[str]:
+        return [tool.name for tool in self.port_check_tools if tool.available]
+
+    @property
+    def available_required_tools(self) -> list[str]:
+        return [tool.name for tool in self.required_tools if tool.available]
+
+    @property
     def active_backend(self) -> str | None:
         """Return the first port-checking backend PortForge will try on this machine."""
 
@@ -152,7 +166,10 @@ class PlatformDiagnostics:
             "failure_reasons": self.failure_reasons,
             "lookup_scope": LOOKUP_SCOPE,
             "has_port_checker": self.has_port_checker,
+            "backend_priority": self.backend_priority,
             "active_backend": self.active_backend,
+            "available_required_tools": self.available_required_tools,
+            "available_port_check_tools": self.available_port_check_tools,
             "missing_tools": self.missing_tools,
             "missing_required_tools": self.missing_required_tools,
             "missing_port_check_tools": self.missing_port_check_tools,
@@ -227,6 +244,7 @@ def format_diagnostics_report(diagnostics: PlatformDiagnostics) -> str:
         f"Ready: {'yes' if diagnostics.ready else 'no'}",
         f"Status: {diagnostics.status}",
         f"Lookup scope: {LOOKUP_SCOPE}",
+        f"Backend priority: {' -> '.join(diagnostics.backend_priority)}",
         f"Active backend: {diagnostics.active_backend or 'none'}",
     ]
 
@@ -264,6 +282,10 @@ def diagnostic_notes(diagnostics: PlatformDiagnostics) -> list[str]:
     notes: list[str] = []
     if diagnostics.active_backend:
         notes.append(f"PortForge will use {diagnostics.active_backend} first for TCP listener checks.")
+    notes.append(
+        "PortForge backend priority is "
+        f"{' -> '.join(diagnostics.backend_priority)}, so diagnostics show both selected and fallback tools."
+    )
     notes.append("PortForge checks listening TCP ports; UDP and non-listening socket states are outside this diagnostic scope.")
     if diagnostics.permission_scope == PERMISSION_SCOPE_USER:
         notes.append("Non-elevated scans may hide process names or owners for listeners owned by other users.")
