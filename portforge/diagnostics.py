@@ -18,6 +18,23 @@ STATUS_UNSUPPORTED = "unsupported"
 PERMISSION_SCOPE_ELEVATED = "elevated"
 PERMISSION_SCOPE_USER = "user"
 PERMISSION_SCOPE_UNKNOWN = "unknown"
+TOOL_INSTALL_HINTS: dict[str, dict[str, str]] = {
+    "darwin": {
+        "lsof": "lsof is included with macOS; reinstall Xcode Command Line Tools if it is unavailable.",
+        "ss": "ss is not required on macOS when lsof is available.",
+        "ps": "ps is included with macOS; reinstall Xcode Command Line Tools if it is unavailable.",
+    },
+    "linux": {
+        "lsof": "Install lsof with your system package manager, for example apt install lsof or dnf install lsof.",
+        "ss": "Install iproute2 to provide ss, for example apt install iproute2 or dnf install iproute.",
+        "ps": "Install procps/procps-ng so PortForge can enrich busy-port output with process commands.",
+    },
+    "windows": {
+        "lsof": "Native Windows lookup is not implemented; run PortForge inside WSL for the current Unix-style backend.",
+        "ss": "Native Windows lookup is not implemented; run PortForge inside WSL for the current Unix-style backend.",
+        "ps": "Native Windows lookup is not implemented; run PortForge inside WSL for the current Unix-style backend.",
+    },
+}
 
 
 @dataclass(frozen=True)
@@ -90,6 +107,10 @@ class PlatformDiagnostics:
         return [tool.name for tool in self.port_check_tools if not tool.available]
 
     @property
+    def missing_tools(self) -> list[str]:
+        return _dedupe(self.missing_required_tools + self.missing_port_check_tools)
+
+    @property
     def is_elevated(self) -> bool | None:
         if self.uid is None:
             return None
@@ -132,8 +153,10 @@ class PlatformDiagnostics:
             "lookup_scope": LOOKUP_SCOPE,
             "has_port_checker": self.has_port_checker,
             "active_backend": self.active_backend,
+            "missing_tools": self.missing_tools,
             "missing_required_tools": self.missing_required_tools,
             "missing_port_check_tools": self.missing_port_check_tools,
+            "install_hints": install_hints(self),
             "required_tools": [tool.to_dict() for tool in self.required_tools],
             "port_check_tools": [tool.to_dict() for tool in self.port_check_tools],
             "notes": diagnostic_notes(self),
@@ -216,6 +239,12 @@ def format_diagnostics_report(diagnostics: PlatformDiagnostics) -> str:
     lines.append("Port check tools:")
     lines.extend(_format_tool_line(tool) for tool in diagnostics.port_check_tools)
 
+    hints = install_hints(diagnostics)
+    if hints:
+        lines.append("")
+        lines.append("Install hints:")
+        lines.extend(f"- {tool}: {hint}" for tool, hint in hints.items())
+
     notes = diagnostic_notes(diagnostics)
     if notes:
         lines.append("")
@@ -256,6 +285,21 @@ def diagnostic_notes(diagnostics: PlatformDiagnostics) -> list[str]:
     if diagnostics.system_key == "linux":
         notes.append("Linux can use lsof or ss; some process details may require sufficient permissions.")
     return notes
+
+
+def install_hints(diagnostics: PlatformDiagnostics) -> dict[str, str]:
+    """Return stable, platform-specific install guidance for missing tools."""
+
+    system_hints = TOOL_INSTALL_HINTS.get(diagnostics.system_key, {})
+    generic_hints = {
+        "lsof": "Install lsof with your system package manager.",
+        "ss": "Install a package that provides ss, commonly iproute2 on Linux.",
+        "ps": "Install a package that provides ps, commonly procps/procps-ng on Linux.",
+    }
+    hints: dict[str, str] = {}
+    for tool in diagnostics.missing_tools:
+        hints[tool] = system_hints.get(tool, generic_hints.get(tool, f"Install {tool} before relying on this diagnostic check."))
+    return hints
 
 
 def recommended_actions(diagnostics: PlatformDiagnostics) -> list[str]:
