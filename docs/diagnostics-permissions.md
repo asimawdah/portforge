@@ -13,13 +13,16 @@ JSON diagnostics also include:
 - `uid`: the detected effective user id, or `null` when unavailable.
 - `elevated`: `true`, `false`, or `null` when unknown.
 - `permission_scope`: a stable string for CI logs and issue reports.
+- `missing_tools`: a de-duplicated list of missing required and port-check tools.
+- `install_hints`: platform-specific installation or environment guidance keyed by missing tool name.
 
 Recommended troubleshooting flow:
 
 1. Run `portforge doctor`.
 2. Check `status` and `failure_reasons` first.
-3. If tools are available but process details are incomplete, compare `permission_scope` with the owner of the development service.
-4. Re-run the same local check with a broader permission context only when the machine is trusted and the missing process details are needed.
+3. If `missing_tools` is not empty, follow `install_hints` before retrying a scan.
+4. If tools are available but process details are incomplete, compare `permission_scope` with the owner of the development service.
+5. Re-run the same local check with a broader permission context only when the machine is trusted and the missing process details are needed.
 
 Example JSON fragment:
 
@@ -30,7 +33,12 @@ Example JSON fragment:
   "permission_scope": "user",
   "uid": 501,
   "elevated": false,
-  "status": "ready",
-  "failure_reasons": []
+  "status": "degraded",
+  "failure_reasons": ["missing_port_check_backend"],
+  "missing_tools": ["lsof", "ss"],
+  "install_hints": {
+    "lsof": "Install lsof with your system package manager, for example apt install lsof or dnf install lsof.",
+    "ss": "Install iproute2 to provide ss, for example apt install iproute2 or dnf install iproute."
+  }
 }
 ```
