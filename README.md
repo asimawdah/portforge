@@ -131,6 +131,8 @@ The diagnostics report now includes:
 
 For WSL, PortForge reports `environment: wsl` and checks the Linux/WSL network namespace. Run PortForge from the same WSL distro that owns the development server you want to inspect.
 
+For a copyable report template and step-by-step remediation flow, see [`docs/port-check-troubleshooting.md`](docs/port-check-troubleshooting.md).
+
 ## CLI shortcuts
 
 - `--preset`: named port preset for scan when `--ports` is not provided
