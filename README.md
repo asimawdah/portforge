@@ -65,7 +65,7 @@ Output diagnostics as JSON for CI or bug reports:
 portforge doctor --json -o portforge-doctor.json
 ```
 
-`doctor --json` writes one JSON object because it represents one machine diagnostic report. Port and scan JSON output remains a list of port check objects.
+`doctor --json` writes one JSON object because it represents one machine diagnostic report. Port and scan JSON output remains a list of port check objects. The stable diagnostics payload is documented in [`docs/diagnostics-json-contract.md`](docs/diagnostics-json-contract.md).
 
 Output JSON:
 
@@ -131,7 +131,7 @@ The diagnostics report now includes:
 
 For WSL, PortForge reports `environment: wsl` and checks the Linux/WSL network namespace. Run PortForge from the same WSL distro that owns the development server you want to inspect.
 
-For a copyable report template and step-by-step remediation flow, see [`docs/port-check-troubleshooting.md`](docs/port-check-troubleshooting.md).
+For a copyable report template and step-by-step remediation flow, see [`docs/port-check-troubleshooting.md`](docs/port-check-troubleshooting.md). For tools that consume `doctor --json`, see the diagnostics contract in [`docs/diagnostics-json-contract.md`](docs/diagnostics-json-contract.md).
 
 ## CLI shortcuts
 
