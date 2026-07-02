@@ -40,6 +40,24 @@ class DiagnosticsDocsTest(unittest.TestCase):
         self.assertIn("project directories", guide)
         self.assertIn("customer data", guide)
 
+    def test_readme_doctor_example_matches_current_diagnostics_sections(self):
+        readme = Path("README.md").read_text(encoding="utf-8")
+
+        required_terms = [
+            "Permission scope: user",
+            "Backend priority: lsof -> ss",
+            "Troubleshooting commands:",
+            "portforge doctor --json -o portforge-doctor.json",
+            "portforge 3000 --json",
+            '"permission_scope": "user"',
+            '"backend_priority": ["lsof", "ss"]',
+            '"troubleshooting_commands"',
+        ]
+
+        for term in required_terms:
+            with self.subTest(term=term):
+                self.assertIn(term, readme)
+
 
 if __name__ == "__main__":
     unittest.main()
