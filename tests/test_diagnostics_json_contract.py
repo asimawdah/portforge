@@ -46,6 +46,7 @@ class DiagnosticsJsonContractTest(unittest.TestCase):
             "missing_required_tools",
             "missing_port_check_tools",
             "install_hints",
+            "troubleshooting_commands",
             "required_tools",
             "port_check_tools",
             "notes",
@@ -65,6 +66,15 @@ class DiagnosticsJsonContractTest(unittest.TestCase):
         self.assertEqual(payload["available_required_tools"], ["ps"])
         self.assertEqual(payload["available_port_check_tools"], ["lsof"])
         self.assertEqual(payload["missing_port_check_tools"], ["ss"])
+        self.assertEqual(
+            payload["troubleshooting_commands"],
+            [
+                "portforge doctor --json -o portforge-doctor.json",
+                "portforge scan --preset frontend",
+                "portforge 3000 --json",
+                "sudo portforge 3000 --json",
+            ],
+        )
 
     def test_documented_minimal_example_is_valid_json(self):
         contract = Path("docs/diagnostics-json-contract.md").read_text(encoding="utf-8")
@@ -78,6 +88,7 @@ class DiagnosticsJsonContractTest(unittest.TestCase):
         self.assertEqual(example["lookup_scope"], "listening_tcp_ports")
         self.assertEqual(example["backend_priority"], ["lsof", "ss"])
         self.assertIn("recommended_actions", example)
+        self.assertIn("troubleshooting_commands", example)
 
 
 if __name__ == "__main__":
