@@ -67,6 +67,8 @@ portforge doctor --json -o portforge-doctor.json
 
 `doctor --json` writes one JSON object because it represents one machine diagnostic report. Port and scan JSON output remains a list of port check objects. The stable diagnostics payload is documented in [`docs/diagnostics-json-contract.md`](docs/diagnostics-json-contract.md).
 
+Before sharing diagnostic JSON in an issue or support thread, review the sharing checklist in [`docs/diagnostics-sharing-safety.md`](docs/diagnostics-sharing-safety.md). Keep stable fields such as `status`, `failure_reasons`, `lookup_scope`, `backend_priority`, `active_backend`, `permission_scope`, `environment`, and `troubleshooting_commands`, but redact private local paths, usernames, project names, customer names, and unrelated command output.
+
 Output JSON:
 
 ```bash
@@ -92,6 +94,7 @@ portforge kill 3000 --yes
 - Avoid running kill commands against system services or processes you do not recognize.
 - When using `--json` or `--output`, review files before sharing them because command paths can include local usernames or project names.
 - Run `portforge doctor` before reporting platform-specific failures so missing tools or unsupported environments are clear.
+- Use the diagnostics sharing checklist before pasting bug-report JSON into public issues.
 
 ## Platform support
 
@@ -134,7 +137,7 @@ The diagnostics report now includes:
 
 For WSL, PortForge reports `environment: wsl` and checks the Linux/WSL network namespace. Run PortForge from the same WSL distro that owns the development server you want to inspect.
 
-For a copyable report template and step-by-step remediation flow, see [`docs/port-check-troubleshooting.md`](docs/port-check-troubleshooting.md). For tools that consume `doctor --json`, see the diagnostics contract in [`docs/diagnostics-json-contract.md`](docs/diagnostics-json-contract.md).
+For a copyable report template and step-by-step remediation flow, see [`docs/port-check-troubleshooting.md`](docs/port-check-troubleshooting.md). For tools that consume `doctor --json`, see the diagnostics contract in [`docs/diagnostics-json-contract.md`](docs/diagnostics-json-contract.md). For privacy-safe issue reports, see [`docs/diagnostics-sharing-safety.md`](docs/diagnostics-sharing-safety.md).
 
 ## CLI shortcuts
 
@@ -238,28 +241,3 @@ When `Status` is `degraded` or `unsupported`, inspect `Failure reasons` first. T
 ```bash
 python3 -m unittest discover -s tests -v
 ```
-
-Manual cross-platform checks before release:
-
-```bash
-portforge doctor
-portforge doctor --json
-portforge scan --preset frontend
-portforge 3000 --json
-```
-
-## Roadmap
-
-- [x] Check a single port
-- [x] Scan common development ports
-- [x] JSON output
-- [x] Safe port freeing with explicit confirmation
-- [x] Platform diagnostics with `portforge doctor`
-- [ ] Interactive confirmation
-- [ ] Project directory detection from process cwd
-- [ ] Windows support improvements
-- [ ] Rich colored output
-
-## License
-
-MIT
