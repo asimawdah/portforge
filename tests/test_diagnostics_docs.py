@@ -10,6 +10,8 @@ class DiagnosticsDocsTest(unittest.TestCase):
             "portforge doctor",
             "portforge doctor --json -o portforge-doctor.json",
             "portforge 3000 --json",
+            "troubleshooting_commands",
+            "Troubleshooting commands",
             "status",
             "failure_reasons",
             "lookup_scope",
