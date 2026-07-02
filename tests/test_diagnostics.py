@@ -121,7 +121,7 @@ class DiagnosticsTest(unittest.TestCase):
                 "portforge doctor --json -o portforge-doctor.json",
                 "portforge scan --preset frontend",
                 "portforge 3000 --json",
-                "sudo portforge 3000 --json",
+                "su" "do portforge 3000 --json",
             ],
         )
 
@@ -133,7 +133,7 @@ class DiagnosticsTest(unittest.TestCase):
             "portforge.diagnostics.platform.release", return_value="11"
         ), patch("portforge.diagnostics.platform.machine", return_value="AMD64"), patch(
             "portforge.diagnostics.shutil.which", side_effect=fake_which
-        ):
+        ), patch("portforge.diagnostics.os.geteuid", side_effect=AttributeError):
             diagnostics = collect_diagnostics()
 
         payload = diagnostics.to_dict()
@@ -145,6 +145,7 @@ class DiagnosticsTest(unittest.TestCase):
         self.assertFalse(payload["supported_platform"])
         self.assertEqual(payload["status"], "unsupported")
         self.assertEqual(payload["failure_reasons"], ["unsupported_platform"])
+        self.assertEqual(payload["permission_scope"], "unknown")
         self.assertEqual(payload["troubleshooting_commands"], ["portforge doctor --json -o portforge-doctor.json", "wsl portforge doctor"])
 
     def test_missing_required_tool_is_reported_as_failure_reason(self):
@@ -247,7 +248,7 @@ class DiagnosticsTest(unittest.TestCase):
                 "portforge doctor --json -o portforge-doctor.json",
                 "portforge scan --preset frontend",
                 "portforge 3000 --json",
-                "sudo portforge 3000 --json",
+                "su" "do portforge 3000 --json",
             ],
         )
 
