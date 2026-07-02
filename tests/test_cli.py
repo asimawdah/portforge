@@ -65,6 +65,20 @@ class CliTest(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         kill.assert_called_once()
 
+    def test_cli_doctor_writes_json_object_and_uses_readiness_exit_code(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "doctor.json"
+
+            with patch("portforge.diagnostics.shutil.which", return_value=None):
+                exit_code = main(["doctor", "--json", "--output", str(output)])
+
+            self.assertEqual(exit_code, 1)
+            content = output.read_text(encoding="utf-8")
+            self.assertTrue(content.lstrip().startswith("{"))
+            self.assertFalse(content.lstrip().startswith("["))
+            self.assertIn('"ready": false', content)
+            self.assertIn('"port_check_tools"', content)
+
 
 if __name__ == "__main__":
     unittest.main()
