@@ -174,6 +174,7 @@ class PlatformDiagnostics:
             "missing_required_tools": self.missing_required_tools,
             "missing_port_check_tools": self.missing_port_check_tools,
             "install_hints": install_hints(self),
+            "troubleshooting_commands": troubleshooting_commands(self),
             "required_tools": [tool.to_dict() for tool in self.required_tools],
             "port_check_tools": [tool.to_dict() for tool in self.port_check_tools],
             "notes": diagnostic_notes(self),
@@ -275,6 +276,12 @@ def format_diagnostics_report(diagnostics: PlatformDiagnostics) -> str:
         lines.append("Recommended actions:")
         lines.extend(f"- {action}" for action in actions)
 
+    commands = troubleshooting_commands(diagnostics)
+    if commands:
+        lines.append("")
+        lines.append("Troubleshooting commands:")
+        lines.extend(f"- `{command}`" for command in commands)
+
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -357,6 +364,26 @@ def recommended_actions(diagnostics: PlatformDiagnostics) -> list[str]:
         actions.append("Run `portforge scan --preset frontend` or `portforge 3000` to verify runtime behavior.")
 
     return _dedupe(actions)
+
+
+def troubleshooting_commands(diagnostics: PlatformDiagnostics) -> list[str]:
+    """Return copyable follow-up commands for support reports and manual checks."""
+
+    commands = ["portforge doctor --json -o portforge-doctor.json"]
+
+    if diagnostics.ready:
+        commands.extend(["portforge scan --preset frontend", "portforge 3000 --json"])
+    elif diagnostics.supported_platform:
+        commands.append("portforge doctor")
+    elif diagnostics.system_key == "windows":
+        commands.append("wsl portforge doctor")
+    else:
+        commands.append("portforge doctor")
+
+    if diagnostics.permission_scope == PERMISSION_SCOPE_USER and diagnostics.has_port_checker:
+        commands.append("sudo portforge 3000 --json")
+
+    return _dedupe(commands)
 
 
 def _tool_status(name: str) -> ToolStatus:
