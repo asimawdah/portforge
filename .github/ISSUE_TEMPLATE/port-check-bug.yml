@@ -13,7 +13,7 @@ body:
         portforge 3000 --json
         ```
 
-        Review the JSON before sharing it. Remove private usernames, project paths, tokens, customer names, or other sensitive local details.
+        Review the JSON before sharing it. Remove private usernames, project paths, tokens, customer names, or other sensitive local details. Use the repository sharing checklist in `docs/diagnostics-sharing-safety.md` if you are unsure what to redact.
 
   - type: input
     id: portforge-version
@@ -53,7 +53,7 @@ body:
     id: diagnostics-json
     attributes:
       label: Sanitized `portforge doctor --json` output
-      description: Paste the JSON object after removing private paths, usernames, tokens, customer data, or unrelated local details.
+      description: Paste the JSON object after removing private paths, usernames, tokens, customer data, or unrelated local details. Keep stable diagnostic fields such as status, failure_reasons, lookup_scope, backend_priority, active_backend, permission_scope, environment, and troubleshooting_commands.
       render: json
       placeholder: |
         {
@@ -68,6 +68,13 @@ body:
           "available_port_check_tools": [],
           "missing_tools": ["lsof", "ss"],
           "permission_scope": "user",
+          "required_tools": [
+            {"name": "ps", "available": true, "path": "<redacted>"}
+          ],
+          "port_check_tools": [
+            {"name": "lsof", "available": false, "path": null},
+            {"name": "ss", "available": false, "path": null}
+          ],
           "troubleshooting_commands": [
             "portforge doctor --json -o portforge-doctor.json",
             "portforge doctor"
@@ -111,7 +118,7 @@ body:
     id: safety-review
     attributes:
       label: Privacy review
-      description: Confirm that the shared output was reviewed and sanitized.
-      placeholder: "I removed private usernames, local project paths, tokens, and customer data from the pasted output."
+      description: Confirm that the shared output was reviewed and sanitized with the diagnostics sharing safety checklist.
+      placeholder: "I removed private usernames, local project paths, tokens, customer data, and unnecessary absolute paths from the pasted output."
     validations:
       required: true
