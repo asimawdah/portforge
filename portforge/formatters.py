@@ -53,6 +53,15 @@ def to_json(checks: list[PortCheck]) -> str:
     return json.dumps(rows, indent=2) + "\n"
 
 
+def to_json_object(item: object) -> str:
+    """Format a single report object as JSON without wrapping it in a list."""
+
+    to_dict = getattr(item, "to_dict", None)
+    if not callable(to_dict):
+        raise TypeError("JSON report objects must define to_dict()")
+    return json.dumps(to_dict(), indent=2) + "\n"
+
+
 def _process_table(processes: list[ProcessInfo]) -> str:
     lines = [f"{'PID':<8} {'USER':<12} {'NAME':<16} COMMAND"]
     for process in processes:
