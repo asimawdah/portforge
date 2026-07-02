@@ -22,6 +22,8 @@ Then run the smallest port check that reproduces the problem:
 portforge 3000 --json
 ```
 
+`portforge doctor` now prints a `Troubleshooting commands` section, and `portforge doctor --json` includes a `troubleshooting_commands` array. Use those copyable commands as the next safe checks before guessing whether the scanner, permissions, or platform backend is the cause.
+
 ## How to read the report
 
 Start with these fields before assuming the scanner is wrong:
@@ -38,6 +40,7 @@ Start with these fields before assuming the scanner is wrong:
 | `install_hints` | Platform-specific install or environment guidance. |
 | `permission_scope` | Whether the command is running as `elevated`, `user`, or `unknown`. |
 | `environment` | `native` or `wsl`; WSL checks the Linux/WSL namespace, not native Windows processes. |
+| `troubleshooting_commands` | Copyable next commands for support reports, ready-machine verification, WSL checks, or elevated retry when process details are hidden. |
 
 ## Common outcomes
 
@@ -90,7 +93,11 @@ Copy this shape into bug reports and replace values from `portforge doctor --jso
   "active_backend": null,
   "available_port_check_tools": [],
   "missing_tools": ["lsof", "ss"],
-  "permission_scope": "user"
+  "permission_scope": "user",
+  "troubleshooting_commands": [
+    "portforge doctor --json -o portforge-doctor.json",
+    "portforge doctor"
+  ]
 }
 ```
 
