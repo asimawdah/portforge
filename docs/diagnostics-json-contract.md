@@ -31,6 +31,7 @@ The report must include these top-level fields:
 | `missing_required_tools` | array of strings | Missing helper tools. |
 | `missing_port_check_tools` | array of strings | Missing listener lookup backends. |
 | `install_hints` | object | Missing tool names mapped to platform-specific install guidance. |
+| `troubleshooting_commands` | array of strings | Copyable follow-up commands for support reports, ready-machine verification, WSL checks, or safe elevated retry. |
 | `required_tools` | array of objects | Full status records for required helper tools. |
 | `port_check_tools` | array of objects | Full status records for listener lookup backends. |
 | `notes` | array of strings | Human-facing context for the report. |
@@ -54,7 +55,8 @@ The report must include these top-level fields:
 2. Use `status` for the primary decision, then inspect `failure_reasons` for remediation.
 3. Treat `notes`, `recommended_actions`, and `install_hints` as user-facing strings; do not use them as stable machine codes.
 4. Use `backend_priority`, `active_backend`, and `lookup_scope` to explain why a port check may differ across macOS, Linux, WSL, and CI.
-5. Do not share raw reports publicly without reviewing paths in nested tool records, because tool paths may expose local system details.
+5. Run or share `troubleshooting_commands` only after reviewing whether elevated commands are appropriate for the current machine.
+6. Do not share raw reports publicly without reviewing paths in nested tool records, because tool paths may expose local system details.
 
 ## Minimal ready example
 
@@ -83,6 +85,12 @@ The report must include these top-level fields:
   "missing_required_tools": [],
   "missing_port_check_tools": [],
   "install_hints": {},
+  "troubleshooting_commands": [
+    "portforge doctor --json -o portforge-doctor.json",
+    "portforge scan --preset frontend",
+    "portforge 3000 --json",
+    "sudo portforge 3000 --json"
+  ],
   "required_tools": [{"name": "ps", "available": true, "path": "/usr/bin/ps"}],
   "port_check_tools": [
     {"name": "lsof", "available": true, "path": "/usr/bin/lsof"},
