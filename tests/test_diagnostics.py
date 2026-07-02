@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from portforge.diagnostics import collect_diagnostics, detect_environment, format_diagnostics_report
+from portforge.diagnostics import collect_diagnostics, detect_environment, format_diagnostics_report, troubleshooting_commands
 
 
 class DiagnosticsTest(unittest.TestCase):
@@ -35,6 +35,10 @@ class DiagnosticsTest(unittest.TestCase):
         self.assertEqual(diagnostics.missing_required_tools, [])
         self.assertEqual(diagnostics.missing_tools, [])
         self.assertEqual(diagnostics.to_dict()["install_hints"], {})
+        self.assertEqual(
+            diagnostics.to_dict()["troubleshooting_commands"],
+            ["portforge doctor --json -o portforge-doctor.json", "portforge scan --preset frontend", "portforge 3000 --json"],
+        )
         self.assertEqual(diagnostics.uid, 0)
         self.assertTrue(diagnostics.is_elevated)
         self.assertEqual(diagnostics.permission_scope, "elevated")
@@ -82,6 +86,7 @@ class DiagnosticsTest(unittest.TestCase):
         self.assertIn("process names or owners", " ".join(payload["notes"]))
         self.assertIn("Install lsof or iproute2/ss", " ".join(payload["recommended_actions"]))
         self.assertIn("elevated permissions", " ".join(payload["recommended_actions"]))
+        self.assertEqual(payload["troubleshooting_commands"], ["portforge doctor --json -o portforge-doctor.json", "portforge doctor"])
         self.assertEqual(payload["missing_port_check_tools"], ["lsof", "ss"])
         self.assertEqual(payload["missing_tools"], ["lsof", "ss"])
         self.assertIn("apt install lsof", payload["install_hints"]["lsof"])
@@ -99,7 +104,7 @@ class DiagnosticsTest(unittest.TestCase):
             "portforge.diagnostics.platform.machine", return_value="x86_64"
         ), patch("portforge.diagnostics.shutil.which", side_effect=fake_which), patch(
             "portforge.diagnostics.Path.read_text", side_effect=OSError
-        ):
+        ), patch("portforge.diagnostics.os.geteuid", return_value=1000):
             diagnostics = collect_diagnostics()
 
         self.assertTrue(diagnostics.ready)
@@ -110,6 +115,15 @@ class DiagnosticsTest(unittest.TestCase):
         self.assertEqual(diagnostics.missing_port_check_tools, ["lsof"])
         self.assertEqual(diagnostics.missing_tools, ["lsof"])
         self.assertIn("lsof", diagnostics.to_dict()["install_hints"])
+        self.assertEqual(
+            diagnostics.to_dict()["troubleshooting_commands"],
+            [
+                "portforge doctor --json -o portforge-doctor.json",
+                "portforge scan --preset frontend",
+                "portforge 3000 --json",
+                "sudo portforge 3000 --json",
+            ],
+        )
 
     def test_unsupported_platform_is_not_ready_even_when_tools_exist(self):
         def fake_which(name):
@@ -131,6 +145,7 @@ class DiagnosticsTest(unittest.TestCase):
         self.assertFalse(payload["supported_platform"])
         self.assertEqual(payload["status"], "unsupported")
         self.assertEqual(payload["failure_reasons"], ["unsupported_platform"])
+        self.assertEqual(payload["troubleshooting_commands"], ["portforge doctor --json -o portforge-doctor.json", "wsl portforge doctor"])
 
     def test_missing_required_tool_is_reported_as_failure_reason(self):
         def fake_which(name):
@@ -210,6 +225,31 @@ class DiagnosticsTest(unittest.TestCase):
         self.assertIn("macOS", report)
         self.assertIn("process names or owners", report)
         self.assertIn("Recommended actions", report)
+        self.assertIn("Troubleshooting commands", report)
+        self.assertIn("portforge doctor --json -o portforge-doctor.json", report)
+
+    def test_troubleshooting_commands_are_stable_and_deduplicated(self):
+        def fake_which(name):
+            return f"/usr/bin/{name}"
+
+        with patch("portforge.diagnostics.platform.system", return_value="Linux"), patch(
+            "portforge.diagnostics.platform.release", return_value="6.0"
+        ), patch("portforge.diagnostics.platform.version", return_value="#1 SMP"), patch(
+            "portforge.diagnostics.platform.machine", return_value="x86_64"
+        ), patch("portforge.diagnostics.shutil.which", side_effect=fake_which), patch(
+            "portforge.diagnostics.Path.read_text", side_effect=OSError
+        ), patch("portforge.diagnostics.os.geteuid", return_value=1000):
+            diagnostics = collect_diagnostics()
+
+        self.assertEqual(
+            troubleshooting_commands(diagnostics),
+            [
+                "portforge doctor --json -o portforge-doctor.json",
+                "portforge scan --preset frontend",
+                "portforge 3000 --json",
+                "sudo portforge 3000 --json",
+            ],
+        )
 
     def test_unknown_permission_scope_is_stable_for_non_posix_platforms(self):
         def fake_which(name):
