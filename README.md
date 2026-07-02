@@ -2,7 +2,7 @@
 
 Find and free busy development ports in seconds.
 
-PortForge helps developers quickly answer the question: **what is using port 3000?** It shows the process, PID, command, and gives you a safe command when you want to free the port.
+PortForge helps developers quickly answer the question: **what is using port 3000?** It shows the process, PID, command, and gives you a safe command when you want to free the port. It also adds practical hints for common development ports so you can recognize likely services before stopping anything.
 
 ## Install
 
@@ -71,11 +71,60 @@ Free a busy port after confirmation:
 portforge kill 3000 --yes
 ```
 
+## Port conflict hints
+
+PortForge includes built-in hints for common local-development ports. These hints do not replace the actual process details; they give quick context so you can decide whether a busy port is probably safe to stop.
+
+| Port | Common service hint |
+| --- | --- |
+| `3000` | Node, Next.js, or React dev server |
+| `3001` | Alternate frontend/API dev server |
+| `4173` | Vite preview |
+| `5000` | Flask/API dev server |
+| `5173` | Vite dev server |
+| `8000` | Django, FastAPI, or Python dev server |
+| `8080` | HTTP proxy, API, or dev server |
+| `9000` | Backend service or MinIO |
+| `3306` | MySQL/MariaDB |
+| `5432` | PostgreSQL |
+| `6379` | Redis |
+| `27017` | MongoDB |
+
+Example scan output with hints:
+
+```text
+$ portforge scan
+PortForge scan
+
+PORT     STATUS   PROCESS            HINT
+3000     busy     node               Node/Next.js/React dev server
+5173     free     -                  Vite dev server
+5432     busy     postgres           PostgreSQL
+```
+
+Machine-readable JSON also includes a `hint` object when a known port has guidance:
+
+```json
+[
+  {
+    "port": 3000,
+    "busy": true,
+    "processes": [],
+    "hint": {
+      "service": "Node/Next.js/React dev server",
+      "note": "Check npm, pnpm, yarn, or a frontend framework dev process."
+    }
+  }
+]
+```
+
 ## Safety notes
 
 - Review the displayed process name, PID, user, and command before killing anything.
+- Treat service hints as guidance only; always verify the actual process command before stopping a port.
 - Prefer the normal kill command first; use `--force` only when a process does not stop cleanly.
 - Avoid running kill commands against system services or processes you do not recognize.
+- Be extra careful with database ports such as PostgreSQL, MySQL, Redis, and MongoDB because active projects may depend on them.
 - When using `--json` or `--output`, review files before sharing them because command paths can include local usernames or project names.
 
 ## Platform support
@@ -100,6 +149,10 @@ Port 3000 is busy
 PID      USER         NAME             COMMAND
 18422    asim         node             npm run dev
 
+Hint:
+  Common use: Node/Next.js/React dev server
+  Check npm, pnpm, yarn, or a frontend framework dev process.
+
 Actions:
   portforge kill 3000
 ```
@@ -108,11 +161,11 @@ Actions:
 $ portforge scan
 PortForge scan
 
-PORT     STATUS   PROCESS
-3000     busy     node
-3001     free     -
-5173     free     -
-8000     busy     python
+PORT     STATUS   PROCESS            HINT
+3000     busy     node               Node/Next.js/React dev server
+3001     free     -                  Alternate frontend/API dev server
+5173     free     -                  Vite dev server
+8000     busy     python             Django/FastAPI/Python dev server
 ```
 
 ## Development
@@ -127,6 +180,7 @@ python3 -m unittest discover -s tests -v
 - [x] Scan common development ports
 - [x] JSON output
 - [x] Safe port freeing with explicit confirmation
+- [x] Known service hints for common development ports
 - [ ] Interactive confirmation
 - [ ] Project directory detection from process cwd
 - [ ] Windows support improvements
