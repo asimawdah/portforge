@@ -47,6 +47,30 @@ These fields are useful for maintainers and automation because they explain whet
 - `troubleshooting_commands`
 - `recommended_actions`
 
+## Minimum maintainer bundle
+
+When a report cannot include the full raw JSON, ask for this smaller sanitized bundle before requesting terminal logs:
+
+```json
+{
+  "schema_version": 2,
+  "system": "Linux",
+  "machine": "x86_64",
+  "environment": "native",
+  "permission_scope": "user",
+  "status": "degraded",
+  "failure_reasons": ["missing_port_check_backend"],
+  "lookup_scope": "listening_tcp_ports",
+  "backend_priority": ["lsof", "ss"],
+  "active_backend": null,
+  "available_port_check_tools": [],
+  "missing_port_check_tools": ["lsof", "ss"],
+  "troubleshooting_commands": ["portforge doctor --json -o portforge-doctor.json"]
+}
+```
+
+This bundle keeps the root-cause signals needed for triage while avoiding process lists, shell history, private working directories, and unrelated command output.
+
 ## Redact before sharing
 
 Review and redact values that can reveal private local context:
