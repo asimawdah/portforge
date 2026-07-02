@@ -1,0 +1,117 @@
+name: Port check bug report
+about: Report a busy-port lookup, platform diagnostic, or incomplete process detail issue
+title: "Port check bug: "
+labels: [bug, diagnostics]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a PortForge port-check issue. Please run the diagnostics below before submitting so maintainers can distinguish missing tools, unsupported platforms, WSL namespace mismatches, and permission-scope issues.
+
+        ```bash
+        portforge doctor --json -o portforge-doctor.json
+        portforge 3000 --json
+        ```
+
+        Review the JSON before sharing it. Remove private usernames, project paths, tokens, customer names, or other sensitive local details.
+
+  - type: input
+    id: portforge-version
+    attributes:
+      label: PortForge version
+      description: Paste the installed version or commit SHA you tested.
+      placeholder: "portforge 0.x.x or commit SHA"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      description: Select the environment reported by `portforge doctor --json`.
+      options:
+        - native
+        - wsl
+        - unsure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: status
+    attributes:
+      label: Diagnostic status
+      description: Select the `status` value from `portforge doctor --json`.
+      options:
+        - ready
+        - degraded
+        - unsupported
+        - unsure
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagnostics-json
+    attributes:
+      label: Sanitized `portforge doctor --json` output
+      description: Paste the JSON object after removing private paths, usernames, tokens, customer data, or unrelated local details.
+      render: json
+      placeholder: |
+        {
+          "schema_version": 2,
+          "system": "Linux",
+          "environment": "native",
+          "status": "degraded",
+          "failure_reasons": ["missing_port_check_backend"],
+          "lookup_scope": "listening_tcp_ports",
+          "backend_priority": ["lsof", "ss"],
+          "active_backend": null,
+          "available_port_check_tools": [],
+          "missing_tools": ["lsof", "ss"],
+          "permission_scope": "user",
+          "troubleshooting_commands": [
+            "portforge doctor --json -o portforge-doctor.json",
+            "portforge doctor"
+          ]
+        }
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Include the smallest command and port number that reproduces the issue.
+      placeholder: |
+        1. Start a local server on TCP port 3000.
+        2. Run `portforge doctor`.
+        3. Run `portforge 3000 --json`.
+        4. PortForge reports the port as free or omits process details.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should PortForge have reported?
+      placeholder: "PortForge should report port 3000 as busy and show the process name/PID."
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What did PortForge report instead?
+      placeholder: "PortForge reported the port as free, or showed a busy port without process details."
+    validations:
+      required: true
+
+  - type: textarea
+    id: safety-review
+    attributes:
+      label: Privacy review
+      description: Confirm that the shared output was reviewed and sanitized.
+      placeholder: "I removed private usernames, local project paths, tokens, and customer data from the pasted output."
+    validations:
+      required: true
