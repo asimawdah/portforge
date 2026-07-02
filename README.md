@@ -124,10 +124,13 @@ The diagnostics report now includes:
 - `Status`: machine-readable state: `ready`, `degraded`, or `unsupported`.
 - `Failure reasons`: stable reason codes such as `unsupported_platform`, `missing_port_check_backend`, and `missing_required_tools`.
 - `Lookup scope`: the diagnostic scope, currently `listening_tcp_ports`.
+- `Backend priority`: the lookup order PortForge will try, currently `lsof -> ss`.
 - `Active backend`: the first available lookup backend PortForge will use, such as `lsof`, `ss`, or `none`.
+- `Permission scope`: whether the current process appears `elevated`, `user`, or `unknown`.
 - `Environment`: whether diagnostics are running in a native environment or WSL.
+- `Troubleshooting commands`: copyable follow-up commands for bug reports, ready-machine checks, WSL checks, or safe elevated retry.
 - `Recommended actions`: install or environment steps to make port checks reliable.
-- JSON fields for `schema_version`, `system`, `release`, `machine`, `environment`, `is_wsl`, `supported_platform`, `ready`, `status`, `failure_reasons`, `lookup_scope`, `active_backend`, `missing_required_tools`, `missing_port_check_tools`, and `recommended_actions`.
+- JSON fields for `schema_version`, `system`, `release`, `machine`, `environment`, `is_wsl`, `uid`, `elevated`, `permission_scope`, `supported_platform`, `ready`, `status`, `failure_reasons`, `lookup_scope`, `backend_priority`, `active_backend`, `available_required_tools`, `available_port_check_tools`, `missing_required_tools`, `missing_port_check_tools`, `install_hints`, `troubleshooting_commands`, and `recommended_actions`.
 
 For WSL, PortForge reports `environment: wsl` and checks the Linux/WSL network namespace. Run PortForge from the same WSL distro that owns the development server you want to inspect.
 
@@ -172,10 +175,12 @@ PortForge diagnostics
 
 Platform: Darwin 25.0 (arm64)
 Environment: native
+Permission scope: user
 Supported platform: yes
 Ready: yes
 Status: ready
 Lookup scope: listening_tcp_ports
+Backend priority: lsof -> ss
 Active backend: lsof
 
 Required tools:
@@ -185,24 +190,44 @@ Port check tools:
   lsof     ok (/usr/sbin/lsof)
   ss       missing
 
+Install hints:
+- ss: ss is not required on macOS when lsof is available.
+
 Notes:
 - PortForge will use lsof first for TCP listener checks.
+- PortForge backend priority is lsof -> ss, so diagnostics show both selected and fallback tools.
 - PortForge checks listening TCP ports; UDP and non-listening socket states are outside this diagnostic scope.
+- Non-elevated scans may hide process names or owners for listeners owned by other users.
 - macOS usually works best with lsof available from the base system.
 
 Recommended actions:
+- If process names or owners are incomplete, rerun the same check with elevated permissions.
 - Run `portforge scan --preset frontend` or `portforge 3000` to verify runtime behavior.
+
+Troubleshooting commands:
+- `portforge doctor --json -o portforge-doctor.json`
+- `portforge scan --preset frontend`
+- `portforge 3000 --json`
+- `sudo portforge 3000 --json`
 ```
 
 ```json
 {
   "schema_version": 2,
   "environment": "native",
+  "permission_scope": "user",
   "ready": true,
   "status": "ready",
   "failure_reasons": [],
   "lookup_scope": "listening_tcp_ports",
-  "active_backend": "lsof"
+  "backend_priority": ["lsof", "ss"],
+  "active_backend": "lsof",
+  "troubleshooting_commands": [
+    "portforge doctor --json -o portforge-doctor.json",
+    "portforge scan --preset frontend",
+    "portforge 3000 --json",
+    "sudo portforge 3000 --json"
+  ]
 }
 ```
 
